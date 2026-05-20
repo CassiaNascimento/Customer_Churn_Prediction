@@ -18,7 +18,7 @@ The project is organized as a python module and is ready for deployment. Next st
 `StreamingMovies: ` Whether the customer has streaming movies service \
 `Contract: ` The recurrance of the contract, i. e. Monthly, Yearly, Bi-yearly \
 `PaperlessBilling: ` Whether the customer receives the billing in paper \
-`PaymentMethod: ` The payment method choosen by the customer \
+`PaymentMethod: ` The payment method chosen by the customer \
 `MonthlyCharges: ` The monthly charge paid by the customer \
 `TotalCharges: ` The total amount of charges paid by the customer \
 `Churn: ` Whether the customer cancelled their contract last month
