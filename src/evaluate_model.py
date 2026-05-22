@@ -1,7 +1,7 @@
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, precision_score, recall_score, average_precision_score, confusion_matrix, classification_report
 import logging
 
-logging.basicConfig(format='%(message)s', level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
 
 def evaluate_model(fitted_pipeline, X_test, y_test):
     """ Evaluate model performance

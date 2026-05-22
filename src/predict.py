@@ -3,22 +3,37 @@ import joblib
 import pandas as pd
 import logging
 
-logging.basicConfig(format='%(message)s', level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
 
-def predict(sample_data):
-    """ Predict churn for new customers
-        1. Load fitted pipeline
-        2. Obtain churn probability and prediction for new customer
-    """
+try:
     fitted_pipeline=joblib.load(CHURN_MODEL_PATH)
-    logging.info(f"Loaded fitted pipeline.")
-    results=[]
-    for item in sample_data:
-        new = pd.DataFrame([item])
-        y_prob=fitted_pipeline.predict_proba(new)[0,1]
-        y_pred=fitted_pipeline.predict(new)[0]
-        results.append({"prediction": int(y_pred),"probability": round(float(y_prob),4)})
+    logger.info("Default pipeline sucessfully loaded.")
+except FileNotFoundError:
+    raise FileNotFoundError(f"Model not found at {CHURN_MODEL_PATH}. Please check the directory.")
 
-    logging.info(f"Prediction finished.")
-    return results
+def predict(sample_data: list[dict[str, str|int|float]]) -> list[dict[str, int|float]]:
+    """ Predict churn for new customers
+
+        Steps:
+            1. Transform input into DataFrame
+            2. Obtain churn probability and prediction for new customer
+
+        Args:
+            sample_data: List of dictionaries containing new customer features.
+        Returns:
+            List of dictionaries with customer churn probabilities and predictions.
+
+        To do:
+            1. Create validation schema
+            2. Create Customer Class.
+    """
+
+    input_df=pd.DataFrame(sample_data)
+
+    y_prob=fitted_pipeline.predict_proba(input_df)[:,1]
+    y_pred=fitted_pipeline.predict(input_df)
+
+    logger.info("Prediction completed for %d samples.", len(sample_data))
+
+    return [{'prediction': int(pred),'probability': round(float(prob), 4),} for pred, prob in zip(y_pred, y_prob)]
 

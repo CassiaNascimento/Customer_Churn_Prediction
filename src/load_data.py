@@ -1,18 +1,38 @@
 import pandas as pd
-from config import RAW_DATA_DIR
+from pathlib import Path
+from config import RAW_DATA_DIR, TARGET
 import logging
 
-logging.basicConfig(format='%(message)s', level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
 
-def load_raw_data(filename=RAW_DATA_DIR/"WA_Fn-UseC_-Telco-Customer-Churn.csv", encoding="utf-8"):
+def load_raw_data(filename: Path=RAW_DATA_DIR/"WA_Fn-UseC_-Telco-Customer-Churn.csv", encoding: str="utf-8") -> pd.DataFrame:
     """ Load the raw data
-        1. IBM sample data available at https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data
+
+        IBM sample data available at https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data
+
+        Args:
+            filename: Path to CSV file.
+            encoding: File encoding.
+        Returns:
+            Loaded dataset as DataFrame.
+        Raises:
+            FileNotFoundError: If file does not exist.
+            ValueError: If dataset is empty or if the target column is missing.
 
         To do:
-        1. Check the file exists
-        2. Validate schema/shape
+        1. Validate schema (check for required columns, column types, allowed values, duplicates)
     """
-    dataset=pd.read_csv(filename)
-    logging.info(f"Loaded raw data.")
 
-    return dataset.copy()
+    if not filename.exists():
+        raise FileNotFoundError(f"File not found: {filename}")
+
+    dataset=pd.read_csv(filename, encoding=encoding)
+
+    if dataset.empty:
+        raise ValueError("Dataset is empty.")
+    if TARGET not in dataset.columns:
+        raise ValueError("Target column not found.")
+
+    logger.info("Raw dataset loaded.")
+
+    return dataset

@@ -1,34 +1,54 @@
-from config import BINARY_FEATURES, CATEGORICAL_FEATURES, NUMERICAL_FEATURES
+from config import BINARY_FEATURES, CATEGORICAL_FEATURES, NUMERICAL_FEATURES, RANDOM_STATE
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 import logging
 
-logging.basicConfig(format='%(message)s', level=logging.INFO, force=True)
+logger = logging.getLogger(__name__)
 
-def build_pipeline(model):
-    """ Build classification pipeline
-        1. One Hot Enconder categorical and binary features
-        2. Scale numerical features
-        3. Build pipeline for chosen model
+classifiers={'Logistic Regression':
+                LogisticRegression(max_iter=300, random_state=RANDOM_STATE),
+            'K-Nearest Neighbors':
+                KNeighborsClassifier(n_neighbors=5, metric='minkowski', n_jobs=-1),
+            'Support Vector Machine':
+                SVC(kernel='rbf', probability=True),
+            'Decision Tree':
+                DecisionTreeClassifier(criterion='gini', splitter='best', random_state=RANDOM_STATE),
+            'Random Forest':
+                RandomForestClassifier(n_estimators=100, criterion='gini', random_state=RANDOM_STATE)}
+
+def build_pipeline(model: str) -> Pipeline:
+    """ Build a scikit-learn classification pipeline
+
+        Steps:
+            1. Encode categorical and binary features with One Hot Encoder
+            2. Apply standard scaler to numerical features
+            3. Build pipeline for chosen model
+
+        Args:
+            model: Name of the classification model.
+        Returns:
+            Scikit-learn Pipeline.
+        Raises:
+            ValueError: If model name is invalid.
     """
-    classifier={'Logistic Regression': LogisticRegression(max_iter=1000, random_state=0),
-                'Random Forest': RandomForestClassifier(n_estimators=200, random_state=0, n_jobs=-1)}
 
-    if model not in classifier:
-        raise ValueError('This is not a valid model. Choose from: [\'Logistic Regression\', \'Random Forest\']')
+    if model not in classifiers:
+        raise ValueError(f"Invalid model. Available models: {list(classifiers.keys())}")
 
-    ct=ColumnTransformer(transformers=[('encoder_binary', OneHotEncoder(drop='if_binary', handle_unknown='ignore'), BINARY_FEATURES),
+    preprocessor=ColumnTransformer(transformers=[('encoder_binary', OneHotEncoder(drop='if_binary', handle_unknown='ignore'), BINARY_FEATURES),
                                        ('encoder_categorical', OneHotEncoder(handle_unknown='ignore'), CATEGORICAL_FEATURES),
-                                       ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)])
+                                       ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='drop')
 
-    pipe=Pipeline([('preprocessor', ct),('classifier', classifier[model])])
-    logging.info(f"Pipeline (encoder, scaler, classifier) created.")
+    pipeline=Pipeline(steps=[('preprocessor', preprocessor),('classifier', classifiers[model])])
+    logger.info("Pipeline (encoder, scaler, classifier) created for model: %s.", model)
 
-    return pipe
+    return pipeline
 
 #column_names=pipe.named_steps['preprocessor'].get_feature_names_out()
 
