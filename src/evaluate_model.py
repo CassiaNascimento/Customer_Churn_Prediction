@@ -5,7 +5,16 @@ logger = logging.getLogger(__name__)
 
 def evaluate_model(fitted_pipeline, X_test, y_test):
     """ Evaluate model performance
-        1. Calculate the most significant scores to evaluate the classification model performance
+
+        Calculate the most significant scores to evaluate the classification model performance
+
+        Args:
+            fitted_pipeline: scikit-learn Pipeline
+            X_test: matrix of test set features
+            y_test: numpy array of test set target values
+
+        Returns:
+            Dictionaire of evaluation metrics
     """
     y_pred=fitted_pipeline.predict(X_test)
     y_prob = fitted_pipeline.predict_proba(X_test)[:,1]
@@ -19,8 +28,8 @@ def evaluate_model(fitted_pipeline, X_test, y_test):
              'recall': recall_score(y_test, y_pred),
              'average_precision': average_precision_score(y_test, y_prob),
              'confusion_matrix': confusion_matrix(y_test, y_pred),
-             'report': classification_report(y_test, y_pred, target_names=['Not Churn', 'Churn'], output_dict=True)}
+             'report': classification_report(y_test, y_pred, target_names=['Not Churn', 'Churn'], output_dict=False)}
 
-    logging.info(f"Calculated accuracy, roc_auc, f_1, precision, recall, average_precision, confusion_matrix and report for {classifier_name} classification model.")
+    logger.info(f"Calculated accuracy, roc_auc, f_1, precision, recall, average_precision, confusion_matrix and report for {classifier_name} classification model.")
 
     return metrics
