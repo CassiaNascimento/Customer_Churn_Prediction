@@ -61,12 +61,12 @@ with tab2:
     df_churn=processed_data[processed_data["Churn"]=="Yes"]
     df_no_churn=processed_data[processed_data["Churn"]=="No"]
 
-    option = st.selectbox("Choose a numerical feature",("Duration of the contract", "Monthly charges per customer", "Total charges per customer"))
+    option1 = st.selectbox("Choose a numerical feature",("Duration of the contract", "Monthly charges per customer", "Total charges per customer"))
 
     #st.write("Indeed we should adress new customers retention and understand the higher fees this group oc customers")
 
     mapping = {"Duration of the contract":"tenure", "Monthly charges per customer":"MonthlyCharges", "Total charges per customer":"TotalCharges"}
-    feat = mapping[option]
+    feat = mapping[option1]
 
     num_bins = 20
     min_val = min(np.min(df_no_churn[feat]), np.min(df_churn[feat]))
@@ -75,18 +75,18 @@ with tab2:
 
     xbins_setting = dict(start=min_val, end=max_val, size=bin_size)
 
-    fig = go.Figure()
-    fig.add_trace(go.Histogram(x=df_no_churn[feat],name="No Churn", xbins=xbins_setting))
-    fig.add_trace(go.Histogram(x=df_churn[feat],name="Churn", xbins=xbins_setting))
-    fig.update_layout(barmode='overlay')
-    fig.update_traces(opacity=0.75)
-    st.plotly_chart(fig, width="stretch")
+    fig1 = go.Figure()
+    fig1.add_trace(go.Histogram(x=df_no_churn[feat],name="No Churn", xbins=xbins_setting))
+    fig1.add_trace(go.Histogram(x=df_churn[feat],name="Churn", xbins=xbins_setting))
+    fig1.update_layout(barmode='overlay')
+    fig1.update_traces(opacity=0.75)
+    st.plotly_chart(fig1, width="stretch", key="fig1")
 
-    option = st.selectbox("Let's take a look at the categorical features and understand a bit more about the patterns in customer behaviour:",("Is female or male?", "Is a senior citizen?", "Has a partner?", "Has dependents?", "Has phone service?", "Has multiple lines?", "Has internet service?", "Has online security?", "Has online backup?", "Has device protection?", "Has tech support?", "Has streaming TV?", "Has streaming movies?", "Type of contract?", "Receives paperless billing?", "Pays by which method?"))
+    option2 = st.selectbox("Let's take a look at the categorical features and understand a bit more about the patterns in customer behaviour:",("Is female or male?", "Is a senior citizen?", "Has a partner?", "Has dependents?", "Has phone service?", "Has multiple lines?", "Has internet service?", "Has online security?", "Has online backup?", "Has device protection?", "Has tech support?", "Has streaming TV?", "Has streaming movies?", "Type of contract?", "Receives paperless billing?", "Pays by which method?"))
 
     mapping = {"Is female or male?":"gender", "Is a senior citizen?": "SeniorCitizen", "Has a partner?":"Partner", "Has dependents?":"Dependents", "Has phone service?":"PhoneService", "Has multiple lines?":"MultipleLines", "Has internet service?":"InternetService", "Has online security?" :"OnlineSecurity", "Has online backup?":"OnlineBackup", "Has device protection?":"DeviceProtection", "Has tech support?":"TechSupport", "Has streaming TV?":"StreamingTV", "Has streaming movies?":"StreamingMovies", "Type of contract?":"Contract", "Receives paperless billing?":"PaperlessBilling", "Pays by which method?":"PaymentMethod"}
 
-    feat = mapping[option]
+    feat = mapping[option2]
 
     labels_churn = np.sort(df_churn[feat].unique())
     sizes_churn = [(df_churn[feat] == labels_churn[j]).sum() for j in range(len(labels_churn))]
@@ -94,13 +94,51 @@ with tab2:
     labels_not_churn = np.sort(df_no_churn[feat].unique())
     sizes_not_churn = [(df_no_churn[feat] == labels_not_churn[j]).sum() for j in range(len(labels_not_churn))]
 
-    fig = make_subplots(rows=1, cols=2, specs=[[{'type':'domain'}, {'type':'domain'}]],subplot_titles=["Churn", "Not Churn"])
+    fig2 = make_subplots(rows=1, cols=2, specs=[[{'type':'domain'}, {'type':'domain'}]],subplot_titles=["Churn", "Not Churn"])
 
-    fig.add_trace(go.Pie(labels=labels_churn, values=sizes_churn, sort=False, hole=.3, name="Churn"),
-              1, 1)
-    fig.add_trace(go.Pie(labels=labels_not_churn, values=sizes_not_churn, sort=False, hole=.3, name="Not Churn"),
-              1, 2)
-    st.plotly_chart(fig, width="stretch")
+    fig2.add_trace(go.Pie(labels=labels_churn, values=sizes_churn, sort=False, hole=.3, name="Churn"), 1, 1)
+    fig2.add_trace(go.Pie(labels=labels_not_churn, values=sizes_not_churn, sort=False, hole=.3, name="Not Churn"), 1, 2)
+    st.plotly_chart(fig2, width="stretch", key="fig2")
+
+with tab3:
+
+    option3 = st.selectbox("Categorical features:",("Is female or male?", "Is a senior citizen?", "Has a partner?", "Has dependents?", "Has phone service?", "Has multiple lines?", "Has internet service?", "Has online security?", "Has online backup?", "Has device protection?", "Has tech support?", "Has streaming TV?", "Has streaming movies?", "Type of contract?", "Receives paperless billing?", "Pays by which method?"))
+
+    mapping = {"Is female or male?":"gender", "Is a senior citizen?": "SeniorCitizen", "Has a partner?":"Partner", "Has dependents?":"Dependents", "Has phone service?":"PhoneService", "Has multiple lines?":"MultipleLines", "Has internet service?":"InternetService", "Has online security?" :"OnlineSecurity", "Has online backup?":"OnlineBackup", "Has device protection?":"DeviceProtection", "Has tech support?":"TechSupport", "Has streaming TV?":"StreamingTV", "Has streaming movies?":"StreamingMovies", "Type of contract?":"Contract", "Receives paperless billing?":"PaperlessBilling", "Pays by which method?":"PaymentMethod"}
+
+    feat = mapping[option3]
+
+    categories=df_churn[feat].unique()
+
+    if len(categories) ==4:
+        fig3=make_subplots(rows=2, cols=2, specs=[[{'type':'domain'},{'type':'domain'}],[{'type':'domain'},{'type':'domain'}]], subplot_titles=categories)
+        i=1
+        k=1
+        for cat in categories:
+            labels=["Churn","Not Churn"]
+            sizes=[(df_churn[feat]==cat).sum(), (df_no_churn[feat]==cat).sum()]
+
+            fig3.add_trace(go.Pie(labels=labels, values=sizes, sort=False, hole=.3, name=cat), k, i)
+            if i%2==0:
+                k+=1
+                i=1
+            else:
+                i+=1
+        fig3.update_layout(height=600,width=900)
+    else:
+        fig3=make_subplots(rows=1, cols=len(categories), specs=[[{'type':'domain'}]*len(categories)], subplot_titles=categories)
+
+        i=1
+        for cat in categories:
+            labels=["Churn","Not Churn"]
+            sizes=[(df_churn[feat]==cat).sum(), (df_no_churn[feat]==cat).sum()]
+
+            fig3.add_trace(go.Pie(labels=labels, values=sizes, sort=False, hole=.3, name=cat), 1, i)
+            i+=1
+
+    st.plotly_chart(fig3, width="stretch", key="fig3")
+
+
 
 with tab4:
 
