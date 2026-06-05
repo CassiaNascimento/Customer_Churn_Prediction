@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly
+from predict import predict
 
 st.title("Customer churn prediction with Machine Learning")
 st.write("This end-to-end machine learning project predicts the customer churn probability for a fictional telecommunications company. The raw data belongs to IBM Sample Data Sets and is available at [Kaggle](https://www.kaggle.com/datasets/blastchar/telco-customer-churn). ")
@@ -117,7 +118,6 @@ with tab2:
 
     st.plotly_chart(fig3, width="stretch", key="fig3")
 
-# Inlcuir na tab 3
 # CORRELACAO ENTRE OS FEATURES E CHURN
 # FEATURE ENGENEERING
 # skeweness could lead to a lot of false negatives.
@@ -134,9 +134,11 @@ with tab4:
 
     with st.form("my_form"):
         col1, col2 = st.columns(2)
-        model = col1.radio(label="Model:",options=["XGBoost","LightGBM"],horizontal=True)
+        #model = col1.radio(label="Model:",options=["XGBoost","LightGBM"],horizontal=True)
+        #metric = col2.radio(label="Metric:",options=["Accuracy","F1 Score"],horizontal=True)
 
-        metric = col2.radio(label="Metric:",options=["Accuracy","F1 Score"],horizontal=True)
+        model = col1.radio(label="Model:",options=["Logistic Regression"],horizontal=True)
+        metric = col2.radio(label="Metric:",options=["F1 Score"],horizontal=True)
 
         option1 = st.selectbox("Is female or male?",("Female","Male"))
         option2 = st.selectbox("Is a senior citizen?",("Yes","No"))
@@ -158,9 +160,36 @@ with tab4:
         option18 = st.slider("What are the Monthly Charges?",0,150,80)
         option19 = st.slider("What are the Total Charges?",0,8500,2000)
 
+        mapping={"Yes":1,"No":0}
+
         st.form_submit_button("Predict")
 
-    st.subheader(f"Using {model} model and {metric.lower()} as metric, we find that the probability of this customer cancelling the contract is 30%.")
+        sample_customer = {
+            "gender": option1,
+            "SeniorCitizen": mapping[option2],
+            "Partner": option3,
+            "Dependents": option4,
+            "tenure": option5,
+            "PhoneService": option6,
+            "MultipleLines": option7,
+            "InternetService": option8,
+            "OnlineSecurity": option9,
+            "OnlineBackup": option10,
+            "DeviceProtection": option11,
+            "TechSupport": option12,
+            "StreamingTV": option13,
+            "StreamingMovies": option14,
+            "Contract": option15,
+            "PaperlessBilling": option16,
+            "PaymentMethod": option17,
+            "MonthlyCharges": option18,
+            "TotalCharges":option19}
+
+    results=predict(sample_data=[sample_customer], model=model)
+
+    prob=round(results[0]["probability"]*100,2)
+
+    st.subheader(f"Using {model} model and {metric.lower()} as metric, we find that the probability of this customer cancelling the contract is {prob}%.")
 
 ################## GUARDADO
 

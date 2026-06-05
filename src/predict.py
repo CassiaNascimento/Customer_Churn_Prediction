@@ -5,13 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    fitted_pipeline=joblib.load(CHURN_MODEL_PATH)
-    logger.info("Default pipeline sucessfully loaded.")
-except FileNotFoundError:
-    raise FileNotFoundError(f"Model not found at {CHURN_MODEL_PATH}. Please check the directory.")
-
-def predict(sample_data: list[dict[str, str|int|float]]) -> list[dict[str, int|float]]:
+def predict(sample_data: list[dict[str, str|int|float]], model: str) -> list[dict[str, int|float]]:
     """ Predict churn for new customers
 
         Steps:
@@ -27,6 +21,13 @@ def predict(sample_data: list[dict[str, str|int|float]]) -> list[dict[str, int|f
             1. Create validation schema
             2. Create Customer Class.
     """
+
+    if model=="Logistic Regression":
+        try:
+            fitted_pipeline=joblib.load(CHURN_MODEL_PATH)
+            logger.info("Default pipeline sucessfully loaded.")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Model not found at {CHURN_MODEL_PATH}. Please check the directory.")
 
     input_df=pd.DataFrame(sample_data)
 

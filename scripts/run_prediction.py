@@ -26,7 +26,7 @@ sample_customer = {
     "TotalCharges": 340.
 }
 
-results=predict([sample_customer,sample_customer,sample_customer,sample_customer])
+results=predict(sample_data=[sample_customer], model="Logistic Regression")
 
 print(results)
 
