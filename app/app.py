@@ -117,6 +117,7 @@ with tab2:
 
     st.plotly_chart(fig3, width="stretch", key="fig3")
 
+# Inlcuir na tab 3
 # CORRELACAO ENTRE OS FEATURES E CHURN
 # FEATURE ENGENEERING
 # skeweness could lead to a lot of false negatives.
