@@ -9,23 +9,25 @@ sample_customer = {
     "SeniorCitizen": 0,
     "Partner": "No",
     "Dependents": "No",
-    "tenure": 1,
+    "tenure": 7,
     "PhoneService": "No",
-    "MultipleLines": "No phone service",
+    "MultipleLines": "No",
     "InternetService": "DSL",
     "OnlineSecurity": "No",
-    "OnlineBackup": "Yes",
+    "OnlineBackup": "No",
     "DeviceProtection": "No",
     "TechSupport": "No",
     "StreamingTV": "No",
     "StreamingMovies": "No",
-    "Contract": "Month-to-month",
-    "PaperlessBilling": "Yes",
+    "Contract": "Two year",
+    "PaperlessBilling": "No",
     "PaymentMethod": "Electronic check",
-    "MonthlyCharges": 29.85,
-    "TotalCharges": 29.85
+    "MonthlyCharges": 30,
+    "TotalCharges": 340.
 }
 
 results=predict([sample_customer,sample_customer,sample_customer,sample_customer])
 
 print(results)
+
+# tenure, monthly charges and total charges: the data must obbey a range

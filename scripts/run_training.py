@@ -20,13 +20,14 @@ dataset_cleaned=clean_data(dataset)
 X_train, X_test, y_train, y_test=split_data(dataset_cleaned, random_state=RANDOM_STATE)
 
 # Building Logistic Regression model
-pipe=build_pipeline('Logistic Regression')
+pipe=build_pipeline(trial=None, model='Logistic Regression')
 
 # Fit pipeline
 fitted_pipe=pipe.fit(X_train, y_train)
 
 # Evaluate model performance
 metrics=evaluate_model(fitted_pipe,X_test,y_test)
+print(metrics)
 
 # Save trained model
 joblib.dump(fitted_pipe, CHURN_MODEL_PATH)
