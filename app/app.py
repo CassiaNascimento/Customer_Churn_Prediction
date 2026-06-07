@@ -1,13 +1,12 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly
 from predict import predict
-
+from build_pipeline import build_preprocessor
+from config import RANDOM_STATE, NUMERICAL_FEATURES, BINARY_FEATURES, CATEGORICAL_FEATURES, TARGET
+from sklearn.feature_selection import SelectKBest,f_classif, chi2, mutual_info_classif
+from sklearn.preprocessing import LabelEncoder
 
 st.title("Customer Churn Prediction with Machine Learning")
 st.write("Identifying customers at risk of churning in advance allows companies to develop targeted retention strategies. This project applies supervised machine learning techniques to estimate customer churn probability for a fictional telecommunications company using the publicly available IBM Telco Customer Churn dataset.")
@@ -16,8 +15,8 @@ st.write("The source code is publicly available on my [GitHub page](https://gith
 
 tab1, tab2, tab3, tab4 = st.tabs([":open_file_folder: The dataset", ":chart_with_upwards_trend: Exploratory analysis", ":bookmark_tabs: Model perfomance comparison", ":keyboard: Make new predictions"])
 
-processed_data = pd.read_csv('../data/processed/cleaned_data.csv')
-processed_data['SeniorCitizen'] = np.where(processed_data['SeniorCitizen']==0, "No", "Yes")
+processed_data=pd.read_csv('../data/processed/cleaned_data.csv')
+processed_data['SeniorCitizen']=np.where(processed_data['SeniorCitizen']==0, "No", "Yes")
 
 df_churn=processed_data[processed_data["Churn"]=="Yes"]
 df_no_churn=processed_data[processed_data["Churn"]=="No"]
@@ -55,7 +54,7 @@ with tab1:
 
     st.write("The churn rate highlights the class imbalance in the dataset, while the remaining metrics suggest that customers who churn tend to have shorter tenures and higher monthly charges than the overall customer population.")
 
-    st.write("In the next tab, we explore these differences in greater detail through an exploratory data analysis aimed at identifying churn patterns in customer attributes and subscribed services.")
+    st.write("In the next tab, we explore these differences in greater detail through an exploratory data analysis aimed at identifying churn patterns in customer demographics, payment info and subscribed services.")
 
 with tab2:
 
@@ -63,23 +62,12 @@ with tab2:
 
     st.write("Choose a numerical feature and visualize how the churned customers differ from non-churned ones:")
 
-    option1 = st.selectbox(" ",("Duration of the contract", "Monthly charges per customer", "Total charges per customer"), label_visibility="collapsed")
+    option1 = st.selectbox(" ",("Tenure", "Monthly charges", "Total charges"), label_visibility="collapsed")
 
-    mapping1 = {"Duration of the contract":"tenure", "Monthly charges per customer":"MonthlyCharges", "Total charges per customer":"TotalCharges"}
+    mapping1 = {"Tenure":"tenure", "Monthly charges":"MonthlyCharges", "Total charges":"TotalCharges"}
     feat1 = mapping1[option1]
 
-    num_bins = 20
-    min_val = min(np.min(df_no_churn[feat1]), np.min(df_churn[feat1]))-1
-    max_val = max(np.max(df_no_churn[feat1]), np.max(df_churn[feat1]))+1
-    bin_size = (max_val - min_val)/num_bins
-
-    xbins_setting = {'start':min_val, 'end':max_val, 'size':bin_size}
-
-    fig1 = go.Figure()
-    fig1.add_trace(go.Histogram(x=df_no_churn[feat1],name="No Churn", xbins=xbins_setting, marker_color='#5B8FF9'))
-    fig1.add_trace(go.Histogram(x=df_churn[feat1],name="Churn", xbins=xbins_setting, marker_color='#E8684A'))
-    fig1.update_layout(margin={'t':10, 'b':0},barmode='overlay',xaxis_title=f"{option1}", yaxis_title="# of customers")
-    fig1.update_traces(opacity=0.8)
+    fig1 = px.violin(processed_data, x="Churn", y=feat1, box=True, category_orders={"Churn":["Yes","No"]}, color="Churn", color_discrete_sequence=["#ef553b","#636efa"])
     st.plotly_chart(fig1, width="stretch", key="histograms")
 
     st.write("These graphics reinforce the initial metrics realizations, new customers retention is key to address contracts cancelation. Let's take a look at the categorical features and understand a bit more about the patterns in customer behaviour:")
@@ -92,63 +80,105 @@ with tab2:
 
     feat2 = mapping2[option2]
 
-    categories=sorted(processed_data[feat2].unique(), key=len)
+    agg_eval=processed_data.groupby(by=[feat2,"Churn"]).size().reset_index(name="count")
 
-    if len(categories) ==4:
-        fig2=make_subplots(rows=2, cols=2, specs=[[{'type':'domain'},{'type':'domain'}],[{'type':'domain'},{'type':'domain'}]], subplot_titles=categories)
-        i=1
-        k=1
-        for cat in categories:
-            labels=["No Churn","Churn"]
-            sizes=[(df_no_churn[feat2]==cat).sum(), (df_churn[feat2]==cat).sum()]
+    total_counts={}
+    for cat in agg_eval[feat2].unique():
+        total_counts[cat]=agg_eval[agg_eval[feat2]==cat]["count"].sum()
 
-            fig2.add_trace(go.Pie(labels=labels, values=sizes, sort=False, hole=.3, name=cat, marker=dict(colors=['#5B8FF9','#E8684A'])), k, i)
-            if i%2==0:
-                k+=1
-                i=1
-            else:
-                i+=1
-        fig2.update_layout(height=600,width=900)
+    for i in range(len(agg_eval)):
+        agg_eval.loc[i,"percent"]=str(round(100*agg_eval.loc[i,"count"]/total_counts[agg_eval.loc[i,feat2]],1))+"%"
 
-    else:
-        fig2=make_subplots(rows=1, cols=len(categories), specs=[[{'type':'domain'}]*len(categories)], subplot_titles=categories)
-
-        i=1
-        for cat in categories:
-            labels=["No Churn","Churn"]
-            sizes=[(df_no_churn[feat2]==cat).sum(), (df_churn[feat2]==cat).sum()]
-
-            fig2.add_trace(go.Pie(labels=labels, values=sizes, sort=False, hole=.3, name=cat, marker=dict(colors=['#5B8FF9','#E8684A'])), 1, i)
-            i+=1
-
+    fig2=px.bar(agg_eval, x=feat2, y="count", color="Churn",text="percent", category_orders={feat2: ["Yes", "No"],"Churn":["Yes","No"]}, barmode="group")
+    fig2.update_traces(marker_color="rgba(99, 110, 250, 0.65)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2, selector=dict(name='No'))
+    fig2.update_traces(marker_color="rgba(239, 85, 59, 0.65)", marker_line_color="rgb(239, 85, 59)",marker_line_width=2, selector=dict(name='Yes'))
+    fig2.update_traces(textposition='outside')
     st.plotly_chart(fig2, width="stretch", key="pie_charts")
+
     st.write("Below we can analize the categorical features correlations with churn. ")
 
-    ######## Third set of plots
+    ######## Third plot
 
-    encoded_data=pd.get_dummies(processed_data)
-    encoded_data=encoded_data.drop(columns=["PaperlessBilling_No","Dependents_No","Partner_No","SeniorCitizen_No","gender_Female","PhoneService_No","Churn_No"])
-    corr_w_churn=encoded_data.corr()["Churn_Yes"].sort_values(ascending=True).reset_index()
-    corr_w_churn.columns = ['variable', 'correlation']
-    corr_w_churn['correlation']=round(corr_w_churn['correlation'],3)
+    X_num=processed_data[NUMERICAL_FEATURES]
+    X_cat=processed_data[BINARY_FEATURES+CATEGORICAL_FEATURES]
+    y=processed_data[TARGET]
 
-    custom_scale = [[0.0, "#5B8FF9"],[0.5, "#FFFFFF"],[1.0, "#E8684A"]]
+    le=LabelEncoder()
+    y=le.fit_transform(y)
 
-    fig3 = px.bar(corr_w_churn, x='correlation', y='variable', orientation='h', color='correlation',  labels={"correlation": "Corr.:"}, color_continuous_scale=custom_scale, color_continuous_midpoint=0)
+    selector=SelectKBest(score_func=f_classif, k='all')
+    selector.fit(X_num,y)
+    scores=selector.scores_
+    names=selector.feature_names_in_
 
-    fig3.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
-    fig3.update_xaxes(visible=False)
+    fig4=px.bar(x=scores, y=names,orientation="h")
+    fig4.update_layout(yaxis={'categoryorder':'total ascending'})
+    fig4.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    fig4.update_layout(margin={'t':10, 'b':10}, height=80,xaxis_title=None, yaxis_title=None)
+    fig4.update_xaxes(visible=False)
+    st.plotly_chart(fig4, width="stretch", key="fig4")
 
-    st.plotly_chart(fig3, width="stretch", key="correlations_bar_plot")
+    ######## Fourth plot
+
+    preprocessor=build_preprocessor(include_scaler=False)
+
+    X_cat=preprocessor.fit_transform(X_cat)
+
+    selector=SelectKBest(score_func=chi2, k='all')
+    selector.fit(X_cat,y)
+    scores=selector.scores_
+    names=[n.split("__")[1] for n in preprocessor.get_feature_names_out()]
+
+    fig5=px.bar(x=scores, y=names, orientation="h", color_discrete_sequence=["#ef553b"])
+    fig5.update_layout(yaxis={'categoryorder':'total ascending'})
+    fig5.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    fig5.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
+    fig5.update_xaxes(visible=False)
+    st.plotly_chart(fig5, width="stretch", key="fig5")
+
+    ######## Fifth plot
+    X_cat=pd.DataFrame(X_cat)
+    X_cat.columns=names
+    X=pd.concat((X_cat,X_num),axis=1)
+
+    names_all=X.columns
+    mask=[]
+    for n in names_all:
+        if n in X_cat.columns:
+            mask.append(True)
+        else:
+            mask.append(False)
+
+    mi=mutual_info_classif(X, y, discrete_features=mask, random_state=RANDOM_STATE)
+
+    #selector=SelectKBest(score_func=mutual_info_classif, k='all')
+    #selector.fit(X,y)
+    #scores=selector.scores_
+
+    fig6=px.bar(x=mi, y=names_all, orientation="h", color_discrete_sequence=["#ef553b"])
+    fig6.update_layout(yaxis={'categoryorder':'total ascending'})
+    fig6.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    fig6.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
+    fig6.update_xaxes(visible=False)
+    st.plotly_chart(fig6, width="stretch", key="fig6")
+
+
+# FEATURE ENGENEERING
+# skeweness could lead to a lot of false negatives.
+# Lowering the threshold from 0.5 generally improves Recall, capturing more actual churners — which is the priority in a business context where missing a churner is more costly than a false alarm.
+
+# TAB 3:
+# CONFUSION MATRIX
+# FEATURE IMPORTANCE
+# ROC curve??
+
 
 with tab4:
 
-    st.write("Now it is your turn to make new predictions. Choose the machine learning model, the metric and insert the new customer features:")
+    st.write("Now it is your turn to make new predictions. Select the demographic characteristics, subscribed services and payment information and find the churn probability for a customer with these features:")
 
     with st.form("my_form"):
         col1, col2 = st.columns(2)
-        #model = col1.radio(label="Model:",options=["XGBoost","LightGBM"],horizontal=True)
-        #metric = col2.radio(label="Metric:",options=["Accuracy","F1 Score"],horizontal=True)
 
         model = col1.radio(label="Model:",options=["Logistic Regression"],horizontal=True)
         metric = col2.radio(label="Metric:",options=["F1 Score"],horizontal=True)
@@ -202,18 +232,4 @@ with tab4:
 
     prob=round(results[0]["probability"]*100,2)
 
-    st.subheader(f"The churning probability for this customer is: {prob}%.")
-
-
-# FEATURE ENGENEERING
-# skeweness could lead to a lot of false negatives.
-# Lowering the threshold from 0.5 generally improves Recall, capturing more actual churners — which is the priority in a business context where missing a churner is more costly than a false alarm.
-
-# TAB 3:
-# CONFUSION MATRIX
-# SHAP FEATURE IMPORTANCE
-# ROC curve??
-
-
-
-
+    st.subheader(f"The probability that this customer will churn is: :primary[{prob}%].")
