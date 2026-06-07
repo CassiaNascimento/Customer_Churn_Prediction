@@ -121,7 +121,7 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
 
     raise ValueError(f"Invalid model: {model}")
 
-def build_preprocessor() -> ColumnTransformer:
+def build_preprocessor(include_scaler:bool=True) -> ColumnTransformer:
     """ Build preprocessor
         Steps:
             1. Encode categorical and binary features with One Hot Encoder
@@ -131,11 +131,14 @@ def build_preprocessor() -> ColumnTransformer:
         Returns:
             Scikit-learn column transformer.
     """
+    if include_scaler:
+        return ColumnTransformer(transformers=[
+            ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
+            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES),
+            ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='drop')
     return ColumnTransformer(transformers=[
-        ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
-        ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES),
-        ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='drop')
-    return
+            ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
+            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES)])
 
 def build_pipeline(trial: Trial | None, model: str) -> Pipeline:
     """ Build a scikit-learn classification pipeline
