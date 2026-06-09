@@ -13,7 +13,7 @@ st.write("Identifying customers at risk of churning in advance allows companies 
 st.write("The project workflow includes data preprocessing, model training, hyperparameter tuning, and performance evaluation of multiple classification models. Given the class imbalance in the dataset, model performance is assessed using F1 score and ROC-AUC. The best performing model is integrated into this Streamlit application, allowing users to generate churn probability estimates for new customers.")
 st.write("The source code is publicly available on my [GitHub page](https://github.com/CassiaNascimento/Customer_Churn_Prediction).")
 
-tab1, tab2, tab3, tab4 = st.tabs([":open_file_folder: The dataset", ":chart_with_upwards_trend: Exploratory analysis", ":bookmark_tabs: Model perfomance comparison", ":keyboard: Make new predictions"])
+tab1, tab2, tab3, tab4 = st.tabs([":open_file_folder: The dataset", ":chart_with_upwards_trend: Exploratory analysis", ":bookmark_tabs: Model perfomance report", ":keyboard: Make new predictions"])
 
 processed_data=pd.read_csv('../data/processed/cleaned_data.csv')
 processed_data['SeniorCitizen']=np.where(processed_data['SeniorCitizen']==0, "No", "Yes")
@@ -39,10 +39,11 @@ with tab1:
 
     churn_rate=round(100*number_of_churns/total_customers,1)
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     col1.metric(label="Customers", value=total_customers, border=True)
     col2.metric(label="Churned Customers",value=number_of_churns,border=True)
     col3.metric(label="Churn Rate", value=f"{churn_rate}\%", border=True)
+    col4.metric(label="Revenue Attrition Rate", value="30.5%",border=True)
 
     col1, col2 = st.columns(2)
     col1.metric(label="Median Tenure", value=f"{round(median_tenure)} months", border=True)
@@ -52,15 +53,24 @@ with tab1:
     col1.metric(label="Median Tenure (Churned Customers)", value=f"{round(median_tenure_churn)} months", delta=f"{round(median_tenure_churn-median_tenure)} months", border=True)
     col2.metric(label="Median Monthly Charge (Churned Customers)", value=f"$ {round(median_monthly_charge_churn,2)}", delta=f"${round(median_monthly_charge_churn-median_monthly_charge,2)}", border=True)
 
-    st.write("The churn rate highlights the class imbalance in the dataset, while the remaining metrics suggest that customers who churn tend to have shorter tenures and higher monthly charges than the overall customer population.")
+    st.write("The churn rate highlights the class imbalance in the dataset. A naive estimate of the imediate impact on revune is of 30\%, comparing to the previous month revenue. The inital analysis suggest that customers who churn tend to have shorter tenures and higher monthly charges than the overall customer population.")
 
-    st.write("In the next tab, we explore these differences in greater detail through an exploratory data analysis aimed at identifying churn patterns in customer demographics, payment info and subscribed services.")
+    st.write("In the next tab, we explore these differences in greater detail through an exploratory data analysis aimed at identifying churn patterns in customer demographics characteristics, payment information and subscribed services.")
+
+#impact on revenue.
 
 with tab2:
 
     ######## First set of plots
 
-    st.write("Choose a numerical feature and visualize how the churned customers differ from non-churned ones:")
+    st.write("The following combined violin and box plots help us visualize how the churned customers population differ from non-churned one. Regarding tenure, we find a right-skewed uni-modal distribution for the churned population, with mode close to 3 months. While for the non-churned population, the distribution is bi-modal with peaks close to 5 months and 68 months. This clearly distinctive behaviour signals the company that new clients retention requires imediate attention.")
+
+    st.write("When it comes to monthly charges, we notice that both ditributions are multi-modal. The churned population exhibits higher peaks around \$80 while the highest peak for the non-churned population sits around \$20. This difference highlights that the customers that are prunned to terminate the contract are the ones with higher fees and are not yet fidelized due to low tenure. Thus, it is possible that special offers for the new customers including keeping the prices freezed for a couple of years, directly reduce early tenure churn and offers time to fidelize the customer, positively impacting the revenue in a longer term.")
+
+    st.write("The total charges distributions are the most similar ones when comparing the churned and non-churned populations. Both are uni-modal and right skewed, with peaks somewhere between \$200 and \$600. This aligns with the balance between lower-tenure and higher-fees observed previously for the churned population.")
+
+    # How the charges change with time? What are the highest paid service?
+    # ho many services the churned population had??
 
     option1 = st.selectbox(" ",("Tenure", "Monthly charges", "Total charges"), label_visibility="collapsed")
 
@@ -68,11 +78,19 @@ with tab2:
     feat1 = mapping1[option1]
 
     fig1 = px.violin(processed_data, x="Churn", y=feat1, box=True, category_orders={"Churn":["Yes","No"]}, color="Churn", color_discrete_sequence=["#ef553b","#636efa"])
+
+    y_label={"Tenure":"Tenure (months)", "Monthly charges":"Monthly charges ($)", "Total charges":"Total charges ($)"}
+
+    fig1.update_yaxes(title_text=y_label[option1])
     st.plotly_chart(fig1, width="stretch", key="histograms")
 
-    st.write("These graphics reinforce the initial metrics realizations, new customers retention is key to address contracts cancelation. Let's take a look at the categorical features and understand a bit more about the patterns in customer behaviour:")
-
     ######## Second set of plots
+
+    st.write("When it comes to the categorical features, some characteristics stand out. Senior citizens are more pronned to terminating the contract, as well as are customers without partners or dependents. We find 90\% of the customers have phone service but the churn is roughly similar to the proportion of customers that do not have acquired this service. The same holds is true for customers with multiple lines.")
+
+    st.write("The internet services are apparently the deciding factor for terminating the contract. We find Fiber Optics to have the highest association with churn, almost 42\% of Fiber Optics customers have terminated the contract, against 19\% of DSL customers. Regarding online security, online backup, device protection and tech support, the customers that subscribes to these services seem to be less likely to churn. For the customer with streaming movies and streaming TV, there is a less significant association to subscribing to these services and churning, but with a slight tendence to retaining these customers.")
+
+    st.write("The majority of the contracts are month-month, and they also represent the most frequent option of churned customers. On top of that, most clients opt for paperless billing and electronic check payment and both can be liked to higher churn probabilities.")
 
     option2 = st.selectbox(" ",("Is female or male?", "Is a senior citizen?", "Has a partner?", "Has dependents?", "Has phone service?", "Has multiple lines?", "Has internet service?", "Has online security?", "Has online backup?", "Has device protection?", "Has tech support?", "Has streaming TV?", "Has streaming movies?", "Type of contract?", "Receives paperless billing?", "Pays by which method?"), label_visibility="collapsed")
 
@@ -95,8 +113,6 @@ with tab2:
     fig2.update_traces(textposition='outside')
     st.plotly_chart(fig2, width="stretch", key="pie_charts")
 
-    st.write("Below we can analize the categorical features correlations with churn. ")
-
     ######## Third plot
 
     X_num=processed_data[NUMERICAL_FEATURES]
@@ -111,12 +127,12 @@ with tab2:
     scores=selector.scores_
     names=selector.feature_names_in_
 
-    fig4=px.bar(x=scores, y=names,orientation="h")
-    fig4.update_layout(yaxis={'categoryorder':'total ascending'})
-    fig4.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
-    fig4.update_layout(margin={'t':10, 'b':10}, height=80,xaxis_title=None, yaxis_title=None)
-    fig4.update_xaxes(visible=False)
-    st.plotly_chart(fig4, width="stretch", key="fig4")
+    #fig4=px.bar(x=scores, y=names,orientation="h")
+    #fig4.update_layout(yaxis={'categoryorder':'total ascending'})
+    #fig4.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    #fig4.update_layout(margin={'t':10, 'b':10}, height=80,xaxis_title=None, yaxis_title=None)
+    #fig4.update_xaxes(visible=False)
+    #st.plotly_chart(fig4, width="stretch", key="fig4")
 
     ######## Fourth plot
 
@@ -129,14 +145,19 @@ with tab2:
     scores=selector.scores_
     names=[n.split("__")[1] for n in preprocessor.get_feature_names_out()]
 
-    fig5=px.bar(x=scores, y=names, orientation="h", color_discrete_sequence=["#ef553b"])
-    fig5.update_layout(yaxis={'categoryorder':'total ascending'})
-    fig5.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
-    fig5.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
-    fig5.update_xaxes(visible=False)
-    st.plotly_chart(fig5, width="stretch", key="fig5")
+    #fig5=px.bar(x=scores, y=names, orientation="h", color_discrete_sequence=["#ef553b"])
+    #fig5.update_layout(yaxis={'categoryorder':'total ascending'})
+    #fig5.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    #fig5.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
+    #fig5.update_xaxes(visible=False)
+    #st.plotly_chart(fig5, width="stretch", key="fig5")
 
     ######## Fifth plot
+
+    st.write("Lastly, we can estimate the mutual information between each feature and the target variable. As expected from the previous bar plots, having a month to month contract shows big influence in the decision to churn. This association also holds true for tenure and other internet services as online security and tech support, as well as the the choice of internet itself. The type of contract and the charges are also impactful. It is interesting to note that the customer gender, having a phone service and having multiple lines does not seem to impact the decision to terminate the contract.")
+
+    st.write("In the next tab, we discuss the performance of multiple classification algorithms when trained on this dataset. We will balance between accuracy and maximizing the number of possible churners detected.")
+
     X_cat=pd.DataFrame(X_cat)
     X_cat.columns=names
     X=pd.concat((X_cat,X_num),axis=1)
