@@ -10,7 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 
 st.title("Customer Churn Prediction with Machine Learning")
 st.write("Identifying customers at risk of churning in advance allows companies to develop targeted retention strategies. This project applies supervised machine learning techniques to estimate customer churn probability for a fictional telecommunications company using the publicly available IBM Telco Customer Churn dataset.")
-st.write("The project workflow includes data preprocessing, model training, hyperparameter tuning, and performance evaluation of multiple classification models. Given the class imbalance in the dataset, model performance is assessed using F1 score and ROC-AUC. The best performing model is integrated into this Streamlit application, allowing users to generate churn probability estimates for new customers.")
+st.write("The project workflow includes data preprocessing, feature engineering, model training, hyperparameter tuning, and performance evaluation of multiple classification models. Given the class imbalance in the dataset, model performance is assessed using F1 score and ROC-AUC. The best performing model is integrated into this Streamlit application, allowing users to generate churn probability estimates for new customers.")
 st.write("The source code is publicly available on my [GitHub page](https://github.com/CassiaNascimento/Customer_Churn_Prediction).")
 
 tab1, tab2, tab3, tab4 = st.tabs([":open_file_folder: The dataset", ":chart_with_upwards_trend: Exploratory analysis", ":bookmark_tabs: Model perfomance report", ":keyboard: Make new predictions"])
@@ -134,7 +134,35 @@ with tab2:
     #fig4.update_xaxes(visible=False)
     #st.plotly_chart(fig4, width="stretch", key="fig4")
 
+
+    ############### Teste
+
+    services=processed_data[["PhoneService","InternetService","OnlineSecurity","OnlineBackup","DeviceProtection","TechSupport","StreamingTV","StreamingMovies"]]
+    mapping={"Yes":1, "Fiber optic":1, "DSL":1, "No":0, "No internet service":0}
+    for col in services.columns:
+        services.loc[:,col]=services.loc[:,col].map(mapping)
+    n_of_services=services.sum(axis=1).to_frame()
+    n_of_services.columns=["n of services"]
+
+    df_n_services=pd.concat((processed_data[["tenure","MonthlyCharges", "TotalCharges"]],n_of_services,processed_data[["Churn"]]),axis=1)
+
+    services_chart=df_n_services.groupby(by=["Churn","n of services"]).size().reset_index(name="count")
+
+    total_counts={}
+    for val in services_chart["n of services"].unique():
+        total_counts[val]=services_chart[services_chart["n of services"]==val]["count"].sum()
+
+    for i in range(len(services_chart)):
+        services_chart.loc[i,"percent"]=str(round(100*services_chart.loc[i,"count"]/total_counts[services_chart["n of services"][i]],1))+"%"
+
+    fig = px.bar(services_chart, x="n of services", y="count",color="Churn", text="percent", category_orders={"Churn":["Yes","No"]}, barmode="group")
+    fig.update_traces(textposition='outside')
+    fig.update_traces(marker_color="rgba(99, 110, 250, 0.65)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2, selector=dict(name='No'))
+    fig.update_traces(marker_color="rgba(239, 85, 59, 0.65)", marker_line_color="rgb(239, 85, 59)",marker_line_width=2, selector=dict(name='Yes'))
+    st.plotly_chart(fig, width="stretch", key="fig")
+
     ######## Fourth plot
+
 
     preprocessor=build_preprocessor(include_scaler=False)
 
@@ -145,12 +173,12 @@ with tab2:
     scores=selector.scores_
     names=[n.split("__")[1] for n in preprocessor.get_feature_names_out()]
 
-    #fig5=px.bar(x=scores, y=names, orientation="h", color_discrete_sequence=["#ef553b"])
-    #fig5.update_layout(yaxis={'categoryorder':'total ascending'})
-    #fig5.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
-    #fig5.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
-    #fig5.update_xaxes(visible=False)
-    #st.plotly_chart(fig5, width="stretch", key="fig5")
+    fig5=px.bar(x=scores, y=names, orientation="h", color_discrete_sequence=["#ef553b"])
+    fig5.update_layout(yaxis={'categoryorder':'total ascending'})
+    fig5.update_traces(marker_color="rgba(99, 110, 250, 0.8)", marker_line_color="rgb(99, 110, 250)",marker_line_width=2)
+    fig5.update_layout(margin={'t':10, 'b':10}, height=800,xaxis_title=None, yaxis_title=None)
+    fig5.update_xaxes(visible=False)
+    st.plotly_chart(fig5, width="stretch", key="fig5")
 
     ######## Fifth plot
 
@@ -160,7 +188,7 @@ with tab2:
 
     X_cat=pd.DataFrame(X_cat)
     X_cat.columns=names
-    X=pd.concat((X_cat,X_num),axis=1)
+    X=pd.concat((X_cat,X_num,n_of_services),axis=1)
 
     names_all=X.columns
     mask=[]

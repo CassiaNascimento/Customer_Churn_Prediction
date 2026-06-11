@@ -135,10 +135,11 @@ def build_preprocessor(include_scaler:bool=True) -> ColumnTransformer:
         return ColumnTransformer(transformers=[
             ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
             ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES),
-            ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='drop')
-    return ColumnTransformer(transformers=[
+            ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='passthrough')
+    else:
+        return ColumnTransformer(transformers=[
             ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
-            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES)])
+            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES)], remainder='passthrough')
 
 def build_pipeline(trial: Trial | None, model: str) -> Pipeline:
     """ Build a scikit-learn classification pipeline
