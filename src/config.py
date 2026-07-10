@@ -15,3 +15,5 @@ CATEGORICAL_FEATURES=['MultipleLines','InternetService','OnlineSecurity','Online
 NUMERICAL_FEATURES=['tenure','MonthlyCharges','TotalCharges']
 
 ORDERED_FEATURES=['gender','SeniorCitizen','Partner','Dependents','tenure','PhoneService','MultipleLines','InternetService','OnlineSecurity','OnlineBackup','DeviceProtection','TechSupport','StreamingTV','StreamingMovies', 'Contract','PaperlessBilling', 'PaymentMethod','MonthlyCharges','TotalCharges']
+
+SERVICE_COLUMNS=['PhoneService','InternetService','OnlineSecurity','OnlineBackup','DeviceProtection','TechSupport','StreamingTV','StreamingMovies']

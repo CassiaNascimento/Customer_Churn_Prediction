@@ -27,8 +27,7 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
         if trial is None:
             return LogisticRegression(max_iter=2000, random_state=RANDOM_STATE, class_weight='balanced')
 
-        params={'solver': trial.suggest_categorical('solver', ['saga']),
-                'l1_ratio': trial.suggest_float('l1_ratio',0.,1.),
+        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga']),
                 'C': trial.suggest_float('C',  1e-3, 1000, log=True)}
 
         return LogisticRegression(max_iter=2000, random_state=RANDOM_STATE, class_weight='balanced',**params)
