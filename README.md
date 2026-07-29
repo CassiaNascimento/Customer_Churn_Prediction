@@ -23,3 +23,12 @@ The project is organized as a python module and is ready for deployment. Next st
 `TotalCharges: ` The total amount of charges paid by the customer \
 `Churn: ` Whether the customer cancelled their contract last month
 
+## Quick Start (Run Locally)
+
+1. Clone the repository from [GitHub](https://github.com/CassiaNascimento/Customer_Churn_Prediction)
+2. Create the Conda environment `conda env create -f environment.yml`
+3. Activate the environment `conda activate churnenv`
+4. Install the package from the project's root directory `pip install -e .`
+5. Navigate to the app folder and run the Streamlit application `streamlit run app.py`
+6. Explore the Streamlit application and the included example notebooks.
+
