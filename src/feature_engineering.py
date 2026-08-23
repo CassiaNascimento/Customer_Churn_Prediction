@@ -6,15 +6,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def build_new_features(dataset: pd.DataFrame)->pd.DataFrame:
+def build_new_features(dataset: pd.DataFrame, new_features: list=["NumberServices", "CustomerLevel", "MonthlyChargePerService", "AverageMonthlyCharge"])->pd.DataFrame:
     """ Build new features
 
         Args:
             dataset: Cleaned dataset.
         Returns:
-            Original dataframe with new feature added
+            Original dataframe with new features added
     """
-    dataset = dataset.copy()
+    dataset=dataset.copy()
+    new_features_added=[]
 
     for col in ['tenure']+SERVICE_COLUMNS:
         if col not in dataset.columns:
@@ -27,21 +28,29 @@ def build_new_features(dataset: pd.DataFrame)->pd.DataFrame:
     for col in SERVICE_COLUMNS:
         n_services+=dataset.loc[:,col].map(mapping).to_numpy()
 
-    dataset['NumberServices']=n_services
-    dataset['NumberServices']=dataset['NumberServices'].astype('int64')
+    # Number of services subscribed
+    if "NumberServices" in new_features:
+        dataset['NumberServices']=n_services
+        dataset['NumberServices']=dataset['NumberServices'].astype('int64')
+        new_features_added.append("NumberServices")
 
-    dataset['monthly_charge_per_service']=dataset['MonthlyCharges']/n_services
+    # Customer seniority rank
+    if "CustomerLevel" in new_features:
+        dataset['CustomerLevel']=pd.cut(dataset['tenure'],bins=[-np.inf, 11, 23, 35, 47, np.inf],labels=[0,1,2,3,4]).astype('int64')
+        new_features_added.append("CustomerLevel")
 
-    dataset['is_month_to_month_and_fiber']=((dataset['Contract']=='Month-to-month') & (dataset['InternetService']=='Fiber optic')).astype(int)
+    # Monthly Charges per number of services subscribed
+    if "MonthlyChargePerService" in new_features:
+        dataset['MonthlyChargePerService']=dataset['MonthlyCharges']/n_services
+        new_features_added.append("MonthlyChargePerService")
 
-    dataset['has_security_or_support']=((dataset['OnlineSecurity']=='Yes') & (dataset['TechSupport']=='Yes')).astype(int)
-
-    dataset['average_monthly_spend']=dataset['TotalCharges']/dataset['tenure']
-
-    dataset['CustomerLevel']=pd.cut(dataset['tenure'],bins=[0, 6, 12, 24, 48 ,100],labels=[0,1,2,3,4]).astype('int64')
+    # Charges averaged per tenure
+    if "AverageMonthlyCharge" in new_features:
+        dataset['AverageMonthlyCharge']=dataset['TotalCharges']/dataset['tenure']
+        new_features_added.append("AverageMonthlyCharge")
 
     rows_with_nan=dataset.isna().any(axis=1).sum()
 
-    logger.info("Added NumberServices and CustomerLevel features. Current rows with NaN: %d.", rows_with_nan)
+    logger.info("Added the following new features: %s. Current rows with NaN: %d.",new_features_added, rows_with_nan)
 
     return dataset

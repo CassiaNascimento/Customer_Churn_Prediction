@@ -10,10 +10,8 @@ from sklearn.pipeline import Pipeline
 from optuna.trial import Trial
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import cross_val_score, StratifiedKFold
-import numpy as np
 import pandas as pd
 from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
 
 def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
     """ Build a scikit-learn classification model
@@ -25,38 +23,45 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
     """
     if model=='Logistic Regression':
         if trial is None:
-            return LogisticRegression(max_iter=2000, random_state=RANDOM_STATE, class_weight='balanced')
+            return LogisticRegression(max_iter=500, class_weight='balanced')
 
-        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga']),
+        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'saga']),
                 'C': trial.suggest_float('C',  1e-3, 1000, log=True)}
 
-        return LogisticRegression(max_iter=2000, random_state=RANDOM_STATE, class_weight='balanced',**params)
+        return LogisticRegression(max_iter=500, random_state=RANDOM_STATE, class_weight='balanced',**params)
 
     elif model=='K-Nearest Neighbors':
         if trial is None:
-            return KNeighborsClassifier(n_neighbors=5, metric='minkowski', n_jobs=-1)
+            return KNeighborsClassifier(n_neighbors=5, metric='minkowski', n_jobs=1)
 
+        metric=trial.suggest_categorical("knn_metric",["euclidean","manhattan","minkowski"])
         params={"n_neighbors": trial.suggest_int("knn_n_neighbors", 3, 50),
                 "weights": trial.suggest_categorical("knn_weights",["uniform", "distance"]),
-                "metric": trial.suggest_categorical("knn_metric",["euclidean","manhattan","minkowski"]),
-                "p": trial.suggest_int("knn_p",1,3)}
+                "metric":metric,
+                "n_jobs":1}
+        if metric=="minkowski":
+            params["p"]=trial.suggest_int("knn_p",1,3)
 
-        return KNeighborsClassifier(n_jobs=-1, **params)
+        return KNeighborsClassifier(**params)
 
     elif model=='Support Vector Machine':
         if trial is None:
-            return SVC(kernel='rbf', probability=True, class_weight='balanced')
+            return SVC(kernel='rbf', probability=True, class_weight='balanced',random_state=RANDOM_STATE)
 
+        kernel=trial.suggest_categorical("svc_kernel",["linear","rbf","poly"])
         params={"C": trial.suggest_float("svc_C",1e-3,100,log=True),
-                "kernel": trial.suggest_categorical("svc_kernel",["linear","rbf","poly"]),
-                "gamma": trial.suggest_float("svc_gamma",1e-5,10,log=True),
-                "degree": trial.suggest_int("svc_degree",2,5)}
+                "kernel":kernel}
+                
+        if kernel in ["rbf","poly"]:
+            params["gamma"]=trial.suggest_float("svc_gamma",1e-5,10,log=True)
+        if kernel == ["poly"]:
+            params["degree"]=trial.suggest_int("svc_degree",2,5)
 
-        return SVC(probability=True, class_weight='balanced',**params)
+        return SVC(probability=True, class_weight='balanced',random_state=RANDOM_STATE,**params)
 
     elif model=='Decision Tree':
         if trial is None:
-            return DecisionTreeClassifier(criterion='gini', splitter='best',random_state=RANDOM_STATE, class_weight='balanced')
+            return DecisionTreeClassifier(criterion='gini', random_state=RANDOM_STATE, class_weight='balanced')
 
         params={"criterion": trial.suggest_categorical("dt_criterion", ["gini", "entropy"]),
                 "max_depth": trial.suggest_int("dt_max_depth", 2, 50),
@@ -68,7 +73,7 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
 
     elif model=='Random Forest':
         if trial is None:
-            return RandomForestClassifier(n_estimators=100, criterion='gini', random_state=RANDOM_STATE, class_weight='balanced')
+            return RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE, class_weight='balanced',n_jobs=1)
 
         params={"n_estimators": trial.suggest_int("rf_n_estimators", 100, 1000, step=100),
                 "criterion": trial.suggest_categorical("rf_criterion", ["gini", "entropy"]),
@@ -77,19 +82,20 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
                 "min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 1, 10),
                 "max_features": trial.suggest_categorical("rf_max_features", ["sqrt","log2", None]),
                 "bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False]),
-                "n_jobs": -1}
+                "njobs":1}
 
         return RandomForestClassifier(random_state=RANDOM_STATE, class_weight='balanced',**params)
 
     elif model=='XGBoost':
         if trial is None:
-            return XGBClassifier(n_estimators =1000, random_state=RANDOM_STATE)
+            return XGBClassifier(n_estimators =1000, random_state=RANDOM_STATE,n_jobs=1)
 
         params={"objective": "binary:logistic",  # or reg:squarederror
                 "eval_metric": "auc",
                 "booster": "gbtree",
+                "tree_method": "hist",
                 "learning_rate": trial.suggest_float("xgb_learning_rate", 1e-3, 0.1, log=True),
-                "max_depth": trial.suggest_int("xgb_max_depth", 3, 6),
+                "max_depth": trial.suggest_int("xgb_max_depth", 3, 10),
                 "min_child_weight": trial.suggest_float("xgb_min_child_weight", 1, 20),
                 "gamma": trial.suggest_float("xgb_gamma", 0, 10),
                 "subsample": trial.suggest_float("xgb_subsample", 0.5, 1.0),
@@ -98,25 +104,9 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
                 "reg_alpha": trial.suggest_float("xgb_reg_alpha", 1e-8, 100, log=True),
                 "reg_lambda": trial.suggest_float("xgb_reg_lambda", 1e-8, 100, log=True),
                 "scale_pos_weight": trial.suggest_float("xgb_scale_pos_weight", 0.5, 20),
-                "tree_method": "hist",
-                "n_jobs": -1}
+                "n_jobs":1}
 
         return XGBClassifier(n_estimators =1000, random_state=RANDOM_STATE,**params)
-
-    elif model=='LightGBM':
-        if trial is None:
-            return LGBMClassifier(n_estimators =1000,random_state=RANDOM_STATE)
-
-        params={"learning_rate": trial.suggest_float("lgbm_learning_rate", 0.005, 0.05, log=True),
-                "max_depth": trial.suggest_int("lgbm_max_depth", 4, 10),
-                "num_leaves": trial.suggest_int("lgbm_num_leaves", 16, 512),
-                "min_child_samples": trial.suggest_int("lgbm_min_child_samples", 20, 100),
-                "subsample": trial.suggest_float("lgbm_subsample", 0.7, 1.0),
-                "colsample_bytree": trial.suggest_float("lgbm_colsample_bytree", 0.7, 1.0),
-                "reg_alpha": trial.suggest_float("lgbm_reg_alpha", 1e-3, 10, log=True),
-                "reg_lambda": trial.suggest_float("lgbm_reg_lambda", 1e-3, 10, log=True)}
-
-        return LGBMClassifier(n_estimators =300,random_state=RANDOM_STATE,**params)
 
     raise ValueError(f"Invalid model: {model}")
 
@@ -130,16 +120,15 @@ def build_preprocessor(include_scaler:bool=True) -> ColumnTransformer:
         Returns:
             Scikit-learn column transformer.
     """
-    if include_scaler:
-        return ColumnTransformer(transformers=[
-            ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
-            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES),
-            ('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES)], remainder='passthrough')
-    else:
-        return ColumnTransformer(transformers=[
-            ('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
-            ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES)], remainder='passthrough')
 
+    transformers=[('encoder_binary', OneHotEncoder(drop='if_binary'), BINARY_FEATURES),
+        ('encoder_categorical', OneHotEncoder(), CATEGORICAL_FEATURES)]
+
+    if include_scaler is True:
+        transformers.append(('scaler_numerical', StandardScaler(), NUMERICAL_FEATURES))
+
+    return ColumnTransformer(transformers=transformers, remainder='passthrough')
+    
 def build_pipeline(trial: Trial | None, model: str) -> Pipeline:
     """ Build a scikit-learn classification pipeline
 
@@ -170,6 +159,6 @@ def objective(trial: Trial, X: pd.DataFrame, y: pd.Series, model: str, scoring: 
     pipeline = build_pipeline(trial=trial, model=model)
 
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_STATE)
-    score = cross_val_score(pipeline, X, y, cv=cv, scoring=scoring, n_jobs=-1)
+    scores = cross_val_score(pipeline, X, y, cv=cv, scoring=scoring, n_jobs=-1)
 
-    return score.mean()
+    return scores.mean()

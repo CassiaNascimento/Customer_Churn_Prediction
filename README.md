@@ -1,34 +1,59 @@
 # Customer Churn Prediction
 This ready to deploy machine learning project predicts the customer churn for a fictional telecommunications company. The raw data belongs to IBM Sample Data Sets and is available at [Kaggle](https://www.kaggle.com/datasets/blastchar/telco-customer-churn).
 
-Churn occurs when the customer cancels an ongoing contract. This ML project utilises classification models to predict, based on a set of 20 features, which customers are likely to churn. This kind of prediction allows the fictional company to develop retaining strategies to avoid the churn. 
+Churn occurs when the customer cancels an ongoing contract. This ML project uses classification models to predict, based on a set of 19 features, which customers are likely to churn. This kind of prediction allows the fictional company to develop retaining strategies to avoid the churn. 
 
-The project is organized as a python module and is ready for deployment. Next steps include creating a docker image and deploying it on the cloud. A streamlit front-end is in progress.
-
-## About the data set: 
-`customerID: ` Unique customer identification number \
-`gender: ` Whether the customer is a Male or a Female \
-`SeniorCitizen: ` Whether the customer is a Senior Citizen \
-`Partner`: Whether the customer has a partner \
-`Dependents: ` Whether the customer has dependents \
-`tenure: ` The duration in months of the customer contract \
-`PhoneService: ` Whether the customer has phone service (for which the customer may also have `MultipleLines`) \
-`InternetService: ` Whether the customer has phone service (for which the customer may also have `OnlineSecurity`, `OnlineBackup`, `DeviceProtection` and `TechSupport`) \
-`StreamingTV: ` Whether the customer has streaming TV service \
-`StreamingMovies: ` Whether the customer has streaming movies service \
-`Contract: ` The recurrance of the contract, i. e. Monthly, Yearly, Bi-yearly \
-`PaperlessBilling: ` Whether the customer receives the billing in paper \
-`PaymentMethod: ` The payment method chosen by the customer \
-`MonthlyCharges: ` The monthly charge paid by the customer \
-`TotalCharges: ` The total amount of charges paid by the customer \
-`Churn: ` Whether the customer cancelled their contract last month
+The project is organized as a python module and is ready for deployment. Next steps include creating a docker image and deploying it on the cloud. A streamlit front-end is available.
 
 ## Quick Start (Run Locally)
 
 1. Clone the repository from [GitHub](https://github.com/CassiaNascimento/Customer_Churn_Prediction)
-2. Create the Conda environment `conda env create -f environment.yml`
-3. Activate the environment `conda activate churnenv`
-4. Install the package from the project's root directory `pip install -e .`
-5. Navigate to the app folder and run the Streamlit application `streamlit run app.py`
-6. Explore the Streamlit application and the included example notebooks.
+2. Dowload the raw [dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) and place it in `data/raw/` 
+3. Create the Conda environment `conda env create -f environment.yml`
+4. Activate the environment `conda activate churnenv`
+5. Install the package from the project's root directory `pip install -e .`.
+6. Navigate to the `app` folder and run the Streamlit application `streamlit run app.py`
+7. Explore the Streamlit application and the included example notebooks.
 
+## About the repository 
+The dataset contains information on customer demographics, subscribed services and billing. A description of every feature is provided below. 
+
+`customerID:` Unique customer identification number. \
+`gender:` Whether the customer is a Male or a Female. \
+`SeniorCitizen:` Whether the customer is a Senior Citizen. \
+`Partner`: Whether the customer has a partner. \
+`Dependents:` Whether the customer has dependents. \
+`tenure:` Number of months the customer has been with the company. \
+`PhoneService:` Whether the customer has phone service. Customers with phone service may also have `MultipleLines`. \
+`MultipleLines:` Whether the customer has multiple phone lines. \
+`InternetService:` Whether the customer has internet service and, if so, the type of internet service. Customers with internet service may also have `OnlineSecurity`, `OnlineBackup`, `DeviceProtection` and `TechSupport`, `StreamingTV` and `StreamingMovies`. \
+`OnlineSecurity:` Whether the customer has a online security service. \
+`OnlineBackup:` Whether the customer has a online backup service. \
+`DeviceProtection:` Whether the customer has a device protection service. \
+`TechSupport:` Whether the customer has a tech support service. \
+`StreamingTV:` Whether the customer has a streaming TV service. \
+`StreamingMovies:` Whether the customer has a streaming movies service. \
+`Contract:` The type of contract: Month-to-month, One year, Two year. \
+`PaperlessBilling:` Whether the customer has opted for paperless billing. \
+`PaymentMethod:` The payment method chosen by the customer. \
+`MonthlyCharges:` The monthly charge paid by the customer. \
+`TotalCharges:` The total amount charged to the customer. \
+`Churn:` Whether the customer churned.
+
+During data cleaning we remove the `customerID` feature and exclude 11 customers with zero tenure and no recorded charges, corresponding to new customers. The remaining 7032 customers form our customer population, characterized by 16 categorical features and 3 numerical features. 
+
+The repository is organized as follows:
+
+- `src/` contains modules to load, clean, save and split the dataset, as well as engineer new features, build the training pipeline, evaluate classifiers performance and generate new predictions. 
+
+- `notebooks/` contains an extensive Exploratory Data Analysis (EDA) with particular attention to identifying high churn risk groups. It also includes example notebooks for model training and for comparing classifier performance with and without hyperparameter optimization.
+
+- `app/` contains the source code for the streamlit application.
+
+- `models/` contains a .pkl file with the best performing classifier trained on this dataset. 
+
+- `scripts/` contains example scripts for running data cleaning, model training, predictions and performance comparisons.
+
+- `data/` contains the `raw/` and `processed/` folders, which are initially empty. The raw dataset must be downloaded and placed in the `raw/` folder. After running the data cleaning step, either in the notebook or through the scripts with the `save=True` flag, the cleaned dataset will be saved in the `processed/` folder.
+
+## Summary of findings
