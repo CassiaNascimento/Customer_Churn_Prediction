@@ -25,22 +25,22 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
         if trial is None:
             return LogisticRegression(max_iter=500, class_weight='balanced')
 
-        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'saga']),
-                'C': trial.suggest_float('C',  1e-3, 1000, log=True)}
+        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'sag']),
+                'C': trial.suggest_float('C',  1e-3, 100, log=True)}
+        if params['solver']=='liblinear':
+            params['penalty']=trial.suggest_categorical('penalty',  ['l1','l2'])
 
-        return LogisticRegression(max_iter=500, random_state=RANDOM_STATE, class_weight='balanced',**params)
+        return LogisticRegression(max_iter=1500, random_state=RANDOM_STATE, class_weight='balanced',**params)
 
     elif model=='K-Nearest Neighbors':
         if trial is None:
-            return KNeighborsClassifier(n_neighbors=5, metric='minkowski', n_jobs=1)
+            return KNeighborsClassifier(n_neighbors=5, metric='minkowski')
 
-        metric=trial.suggest_categorical("knn_metric",["euclidean","manhattan","minkowski"])
-        params={"n_neighbors": trial.suggest_int("knn_n_neighbors", 3, 50),
+        params={"n_neighbors": trial.suggest_int("knn_n_neighbors", 2, 50),
                 "weights": trial.suggest_categorical("knn_weights",["uniform", "distance"]),
-                "metric":metric,
-                "n_jobs":1}
-        if metric=="minkowski":
-            params["p"]=trial.suggest_int("knn_p",1,3)
+                "metric": trial.suggest_categorical("knn_metric",["euclidean","manhattan","minkowski"])}
+        if params["metric"]=="minkowski":
+            params["p"]=trial.suggest_float("knn_p",1,5)
 
         return KNeighborsClassifier(**params)
 
