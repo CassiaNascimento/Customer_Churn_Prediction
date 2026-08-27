@@ -25,10 +25,10 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
         if trial is None:
             return LogisticRegression(max_iter=500, class_weight='balanced')
 
-        params={'solver': trial.suggest_categorical('solver', ['lbfgs', 'liblinear', 'newton-cg', 'sag']),
-                'C': trial.suggest_float('C',  1e-3, 100, log=True)}
+        params={'solver': trial.suggest_categorical('lr_solver', ['lbfgs', 'liblinear', 'newton-cg', 'sag']),
+                'C': trial.suggest_float('lr_C',  1e-3, 100, log=True)}
         if params['solver']=='liblinear':
-            params['penalty']=trial.suggest_categorical('penalty',  ['l1','l2'])
+            params['penalty']=trial.suggest_categorical('lr_penalty',  ['l1','l2'])
 
         return LogisticRegression(max_iter=1500, random_state=RANDOM_STATE, class_weight='balanced',**params)
 
@@ -48,14 +48,13 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
         if trial is None:
             return SVC(kernel='rbf', probability=True, class_weight='balanced',random_state=RANDOM_STATE)
 
-        kernel=trial.suggest_categorical("svc_kernel",["linear","rbf","poly"])
         params={"C": trial.suggest_float("svc_C",1e-3,100,log=True),
-                "kernel":kernel}
+                "kernel":trial.suggest_categorical("svc_kernel",["linear","rbf","poly"])}
                 
-        if kernel in ["rbf","poly"]:
-            params["gamma"]=trial.suggest_float("svc_gamma",1e-5,10,log=True)
-        if kernel == ["poly"]:
-            params["degree"]=trial.suggest_int("svc_degree",2,5)
+        if params["kernel"] in ["rbf","poly"]:
+            params["gamma"]=trial.suggest_float("svc_gamma",1e-3,5,log=True)
+        if params["kernel"] == ["poly"]:
+            params["degree"]=trial.suggest_int("svc_degree",2,6)
 
         return SVC(probability=True, class_weight='balanced',random_state=RANDOM_STATE,**params)
 
@@ -64,16 +63,16 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
             return DecisionTreeClassifier(criterion='gini', random_state=RANDOM_STATE, class_weight='balanced')
 
         params={"criterion": trial.suggest_categorical("dt_criterion", ["gini", "entropy"]),
-                "max_depth": trial.suggest_int("dt_max_depth", 2, 50),
-                "min_samples_split": trial.suggest_int("dt_min_samples_split", 2, 20),
-                "min_samples_leaf": trial.suggest_int("dt_min_samples_leaf", 1, 10),
+                "max_depth": trial.suggest_int("dt_max_depth", 1, 50),
+                "min_samples_split": trial.suggest_float("dt_min_samples_split", 0., 1.),
+                "min_samples_leaf": trial.suggest_float("dt_min_samples_leaf", 0., 1.),
                 "max_features": trial.suggest_categorical("dt_max_features", [None,"sqrt","log2"])}
 
         return DecisionTreeClassifier(random_state=RANDOM_STATE, class_weight='balanced',**params)
 
     elif model=='Random Forest':
         if trial is None:
-            return RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE, class_weight='balanced',n_jobs=1)
+            return RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE, class_weight='balanced')
 
         params={"n_estimators": trial.suggest_int("rf_n_estimators", 100, 1000, step=100),
                 "criterion": trial.suggest_categorical("rf_criterion", ["gini", "entropy"]),
@@ -81,8 +80,7 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
                 "min_samples_split": trial.suggest_int("rf_min_samples_split", 2, 20),
                 "min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 1, 10),
                 "max_features": trial.suggest_categorical("rf_max_features", ["sqrt","log2", None]),
-                "bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False]),
-                "njobs":1}
+                "bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False])}
 
         return RandomForestClassifier(random_state=RANDOM_STATE, class_weight='balanced',**params)
 
