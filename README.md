@@ -7,7 +7,7 @@ The project is structured as a modular Python package. Next steps include contai
 
 ## Streamlit Web App
 
-This project includes an interactive web application built with Streamlit [].
+This project includes an interactive web application built with [Streamlit](https://cassia-customer-churn-prediction.streamlit.app/).
 
 ## Quick Start (Run Locally)
 
