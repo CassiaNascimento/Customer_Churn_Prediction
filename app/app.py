@@ -11,7 +11,6 @@ from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from pathlib import Path
 import re
 import json
-import glob
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -338,7 +337,7 @@ with tab3:
 
     table_rows=[]
     cm_05={}
-    for file in glob.glob(ROOT_DIR/"reports/*_th_05.json"):
+    for file in ROOT_DIR.glob("reports/*_th_05.json"):
         with open(file, "r") as f:
             data=json.load(f)
         row={}
@@ -379,7 +378,7 @@ with tab3:
     name_map2={"XGBClassifier":"XGBoost","LogisticRegression":"Logistic Regression"}
     table_rows=[]
     cm_04={}
-    for file in glob.glob(ROOT_DIR/"reports/*_th_04.json"):
+    for file in ROOT_DIR.glob("reports/*_th_04.json"):
         with open(file, "r") as f:
             data=json.load(f)
         row={}
@@ -404,7 +403,7 @@ with tab3:
     name_map3={"XGBClassifier":"XGBoost","LogisticRegression":"Logistic Regression"}
     table_rows=[]
     cm_06={}
-    for file in glob.glob(ROOT_DIR/"reports/*_th_06.json"):
+    for file in ROOT_DIR.glob("reports/*_th_06.json"):
         with open(file, "r") as f:
             data=json.load(f)
         row={}
