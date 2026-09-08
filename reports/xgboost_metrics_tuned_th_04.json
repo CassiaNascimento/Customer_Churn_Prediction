@@ -1,0 +1,21 @@
+{
+    "classifier_name": "XGBClassifier",
+    "threshold": 0.4,
+    "accuracy": 0.718,
+    "f1": 0.621,
+    "f2": 0.749,
+    "precision": 0.483,
+    "recall": 0.869,
+    "roc_auc": 0.854,
+    "average_precision": 0.672,
+    "confusion_matrix": [
+        [
+            685,
+            348
+        ],
+        [
+            49,
+            325
+        ]
+    ]
+}

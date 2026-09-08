@@ -1,0 +1,21 @@
+{
+    "classifier_name": "LogisticRegression",
+    "threshold": 0.6,
+    "accuracy": 0.783,
+    "f1": 0.637,
+    "f2": 0.684,
+    "precision": 0.572,
+    "recall": 0.719,
+    "roc_auc": 0.851,
+    "average_precision": 0.659,
+    "confusion_matrix": [
+        [
+            832,
+            201
+        ],
+        [
+            105,
+            269
+        ]
+    ]
+}

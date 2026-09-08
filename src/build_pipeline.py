@@ -9,12 +9,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from optuna.trial import Trial
 from sklearn.base import BaseEstimator
-from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.model_selection import cross_val_score, cross_val_predict, StratifiedKFold
+from sklearn.metrics import precision_recall_curve
 import pandas as pd
+import numpy as np
 from xgboost import XGBClassifier
 
 def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
-    """ Build a scikit-learn classification model
+    """ Build a scikit-learn classification model with optional Optuna tuning 
         Args:
             trial: Optuna Trial.
             model: Scikit-learn classification model name.
@@ -23,23 +25,22 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
     """
     if model=="Logistic Regression":
         if trial is None:
-            return LogisticRegression(max_iter=500, class_weight="balanced")
+            return LogisticRegression(max_iter=1000, class_weight="balanced",random_state=RANDOM_STATE)
 
-        params={"solver": trial.suggest_categorical("lr_solver", ["lbfgs", "liblinear", "newton-cg", "sag"]),
-                "C": trial.suggest_float("lr_C",  0.1, 40, log=True)}
-        if params["solver"]=="liblinear":
-            params["penalty"]=trial.suggest_categorical("lr_penalty",  ["l1","l2"])
+        params={"solver": "liblinear",
+                "C": trial.suggest_float("lr_C",  1e-3, 10., log=True),
+                "penalty": trial.suggest_categorical("lr_penalty", ["l1", "l2"])}
 
-        return LogisticRegression(max_iter=500, random_state=RANDOM_STATE, class_weight="balanced",**params)
+        return LogisticRegression(max_iter=1000, random_state=RANDOM_STATE, class_weight="balanced",**params)
 
     elif model=="K-Nearest Neighbors":
         if trial is None:
             return KNeighborsClassifier(n_neighbors=5, weights= "uniform", metric="minkowski")
 
-        params={"weights": "uniform",
-                "metric": "minkowski",
-                "n_neighbors": trial.suggest_int("knn_n_neighbors", 2, 25),
-                "p": trial.suggest_int("k_nn_p",1,6)}
+        params={"metric":"minkowski",
+                "weights": trial.suggest_categorical("knn_weights", ["uniform", "distance"]),
+                "n_neighbors": trial.suggest_int("knn_n_neighbors", 5, 50),
+                "p": trial.suggest_int("knn_p",1,2)}
         
         return KNeighborsClassifier(**params)
 
@@ -47,56 +48,44 @@ def build_classifier(trial: Trial | None, model: str) -> BaseEstimator:
         if trial is None:
             return SVC(kernel="rbf", probability=True, class_weight="balanced",random_state=RANDOM_STATE)
 
-        params={"C": trial.suggest_float("svc_C",1e-3,100,log=True),
-                "kernel":trial.suggest_categorical("svc_kernel",["linear","rbf","poly"])}
-                
-        if params["kernel"] in ["rbf","poly"]:
-            params["gamma"]=trial.suggest_float("svc_gamma",1e-3,5,log=True)
-        if params["kernel"] == ["poly"]:
-            params["degree"]=trial.suggest_int("svc_degree",2,6)
+        params={"kernel": "rbf",
+                "C": trial.suggest_float("svc_C",1e-2,10.0,log=True),
+                "gamma":trial.suggest_float("svc_gamma",1e-4,0.1,log=True)}
 
-        return SVC(probability=True,random_state=RANDOM_STATE, class_weight="balanced",**params)
+        return SVC(probability=True,class_weight="balanced",random_state=RANDOM_STATE,**params)
 
     elif model=="Decision Tree":
         if trial is None:
-            return DecisionTreeClassifier(criterion="gini", random_state=RANDOM_STATE, class_weight="balanced")
+            return DecisionTreeClassifier(random_state=RANDOM_STATE, class_weight="balanced")
 
-        params={"criterion": trial.suggest_categorical("dt_criterion", ["gini", "entropy"]),
-                "max_depth": trial.suggest_int("dt_max_depth", 2, 10),
-                "min_samples_split": trial.suggest_int("dt_min_samples_split", 2, 30),
-                "min_samples_leaf": trial.suggest_int("dt_min_samples_leaf", 1, 20),
-                "max_features": trial.suggest_categorical("dt_max_features", [None,"sqrt","log2"])}
+        params={"max_depth": trial.suggest_int("dt_max_depth", 2, 8),
+                "min_samples_split": trial.suggest_int("dt_min_samples_split", 10, 50),
+                "min_samples_leaf": trial.suggest_int("dt_min_samples_leaf", 5, 40)}
 
         return DecisionTreeClassifier(random_state=RANDOM_STATE, class_weight="balanced",**params)
 
     elif model=="Random Forest":
         if trial is None:
-            return RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE, class_weight="balanced")
+            return RandomForestClassifier(n_estimators=200, random_state=RANDOM_STATE, class_weight="balanced")
 
-        params={"n_estimators": trial.suggest_int("rf_n_estimators", 500, 1500, step=100),
-                "criterion": trial.suggest_categorical("rf_criterion", ["gini", "entropy"]),
-                "max_depth": trial.suggest_int("rf_max_depth", 2, 15),
-                "min_samples_split": trial.suggest_int("rf_min_samples_split", 2, 25),
-                "min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 1, 10),
-                "max_features": trial.suggest_categorical("rf_max_features", ["sqrt","log2", None]),
-                "bootstrap": trial.suggest_categorical("rf_bootstrap", [True, False])}
+        params={"n_estimators": 200,
+                "max_depth": trial.suggest_int("rf_max_depth", 3, 10),
+                "min_samples_leaf": trial.suggest_int("rf_min_samples_leaf", 2, 20),
+                "max_features": trial.suggest_categorical("rf_max_features", ["sqrt","log2", None]),}
 
         return RandomForestClassifier(random_state=RANDOM_STATE, class_weight="balanced",**params)
 
     elif model=="XGBoost":
         if trial is None:
-            return XGBClassifier(objective= "binary:logistic", eval_metric="auc", random_state=RANDOM_STATE, n_estimators =1000 ,n_jobs=1)
+            return XGBClassifier(n_estimators =100,objective= "binary:logistic", eval_metric="auc", random_state=RANDOM_STATE,n_jobs=1)
 
-        params={"n_estimators": trial.suggest_int("xgb_n_estimators",500,1500, step=100),
-                "scale_pos_weight": trial.suggest_float("xgb_scale_pos_weight", 1., 4.5),
-                "learning_rate": trial.suggest_float("xgb_learning_rate", 0.005, 0.1, log=True),
-                "max_depth": trial.suggest_int("xgb_max_depth", 2, 20),
-                "min_child_weight": trial.suggest_int("xgb_min_child_weight", 1, 20),
-                "gamma": trial.suggest_float("xgb_gamma", 0, 30),
-                "subsample": trial.suggest_float("xgb_subsample", 0.35, 1.0),
-                "colsample_bytree": trial.suggest_float("xgb_colsample_bytree", 0.5, 1.0),
-                "reg_alpha": trial.suggest_float("xgb_reg_alpha", 1e-3, 5, log=True),
-                "reg_lambda": trial.suggest_float("xgb_reg_lambda", 1e-3, 5, log=True)}
+        params={"n_estimators": 100,
+                "scale_pos_weight": 2.7,
+                "learning_rate": trial.suggest_float("xgb_learning_rate", 0.01, 0.1),
+                "max_depth": trial.suggest_int("xgb_max_depth", 2, 6),
+                "min_child_weight": trial.suggest_int("xgb_min_child_weight", 3, 25),
+                "subsample": trial.suggest_float("xgb_subsample", 0.6, 0.9),
+                "colsample_bytree": trial.suggest_float("xgb_colsample_bytree", 0.6, 0.9)}
 
         return XGBClassifier(objective= "binary:logistic", eval_metric="auc", random_state=RANDOM_STATE,n_jobs=1,**params)
 
@@ -136,7 +125,7 @@ def build_pipeline(trial: Trial | None, model: str) -> Pipeline:
     return Pipeline(steps=[("preprocessor", preprocessor),("classifier", classifier)])
 
 
-def objective(trial: Trial, X: pd.DataFrame, y: pd.Series, model: str, scoring: str = "f1", n_splits: int=5) -> float:
+def objective(trial: Trial, X: pd.DataFrame, y: pd.Series, model: str, scoring: str = "average_precision", n_splits: int=5) -> float:
     """ Optuna objetive function
 
         Args:
@@ -154,3 +143,4 @@ def objective(trial: Trial, X: pd.DataFrame, y: pd.Series, model: str, scoring: 
     scores = cross_val_score(pipeline, X, y, cv=cv, scoring=scoring, n_jobs=-1)
     
     return scores.mean()
+

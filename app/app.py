@@ -8,17 +8,24 @@ from build_pipeline import build_preprocessor
 from config import RANDOM_STATE, NUMERICAL_FEATURES, BINARY_FEATURES, CATEGORICAL_FEATURES, TARGET
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+from pathlib import Path
+import re
+import json
+import glob
 
 st.title("Customer Churn Prediction with Machine Learning")
 st.write("Identifying customers at high risk of churning in advance enables companies to "
     "develop targeted retention strategies. This project applies supervised machine learning "
     "techniques to estimate customer churn probability for a fictional telecommunications "
     "company using the publicly available IBM Telco Customer Churn dataset.")
-st.write("The project workflow includes **data preprocessing, feature engineering, model "
-    "training, hyperparameter tuning**, and performance evaluation of multiple classification "
-    "models. Given the class imbalance in the dataset, model performance is assessed using "
-    "**F1 score** and **ROC-AUC**. The best performing model is integrated into this Streamlit "
-    "application, allowing users to generate churn probability estimates for new customers.")
+st.write("The project workflow encompasses **data preprocessing, feature engineering, model "
+    "training, hyperparameter tuning with Optuna**, and **performance evaluation** of multiple "
+    "classification models, including XGBoost. Given the class imbalance in the dataset, "
+    "hyperparameter optimization is performed using **Average Precision Score (PR-AUC)**. "
+    "Model performance is then evaluated using **F1**, **Precision**, **Recall**, **Accuracy**, "
+    "**ROC-AUC** scores, and **confusion matrices**. The best performing model is integrated "
+    "into this Streamlit application, allowing users to generate churn probability estimates "
+    "for new customers.")
 st.write("The source code is publicly available on my [GitHub page]"
     "(https://github.com/CassiaNascimento/Customer_Churn_Prediction).")
 
@@ -308,6 +315,194 @@ with tab2:
         "overall predictive accuracy and the ability to correctly identify customers "
         "likely to churn.")
 
+with tab3:
+
+    st.write("After cleaning the dataset, we trained several classification algorithms to "
+        "identify the best performing model aligned with the company's business objectives. "
+        "We carry out a hyperparameter optimization using Optuna and given the class "
+        "imbalance in the dataset, the optimization score chosen is **Average "
+        "Precision**, which is threshold independent.")
+    
+    st.write("For this predictive task, we trained the following classification models: "
+        "**XGBoost**, **Logistic Regression**, **K-Nearest Neighbors**, **Support Vector Machine**, "
+        "**Decision Tree** and **Random Forest**. The evaluation metrics "
+        "for each model are summarized below, with a green highlight on the highest "
+        "score found for each metric.")
+
+    ########### Threshold 0.5
+    name_map1={"XGBClassifier":"XGBoost","RandomForestClassifier":"Random Forest",
+            "LogisticRegression":"Logistic Regression","SVC":"Support Vector Machine",
+            "KNeighborsClassifier":"K-Nearest Neighbors","DecisionTreeClassifier":"Decision Tree"}
+
+    table_rows=[]
+    cm_05={}
+    for file in glob.glob("../reports/*_th_05.json"):
+        with open(file, "r") as f:
+            data=json.load(f)
+        row={}
+        for key, val in data.items():
+            if key not in ["confusion_matrix"]:
+                metric_name=key.replace("_", " ").title()
+                row[metric_name]=val
+            elif key=="confusion_matrix":
+                cm_05[data["classifier_name"]]=val
+        table_rows.append(row)
+
+    df_metrics=pd.DataFrame(table_rows).sort_values(by="Average Precision", ascending=False)
+    df_metrics["Classifier Name"]=df_metrics["Classifier Name"].map(name_map1)
+    df_metrics.set_index("Classifier Name", inplace=True)
+    subset=[col for col in df_metrics.columns if col!="Threshold"]
+    st.dataframe(df_metrics.style.format(precision=3).highlight_max(subset=subset,axis=0, color="#8AC847"),width='stretch')
+
+    st.write("Regarding the optimization metric, **XGBoost** achieved the **best overall "
+        "performance**. However, Logistic Regression secured top scores in **3 out of the 6 "
+        "metrics**. This surprising performance combined with the model high "
+        "interpretability also makes Logistic Regression a strong candidate for deployment.")
+    st.write("Support Vector Machine and K-Nearest Neighbors are the only models to achieve "
+        "**accuracy above 0.8** and **precision above 0.6**. On the other hand, they "
+        "both exhibit the lowest recall rates, making them less suited when our main "
+        "focus is the detection of **high churn risk customers**.")
+    st.write("The Decision Tree model yielded the lowest Average Precision score, despite "
+        "achieving one of the highest recall rates. While it successfully captures "
+        "one of the largest portions of actual churners, it increases the number of false "
+        "positives. Thus, if the retention strategies are expensive, adopting this model "
+        "would negatively impact the revenue by inflating the number of incorrectly identified " 
+        "churners.")
+    st.write("Next, let's take a further look into **XGBoost** and **Logistic Regression** "
+        "performances across different decision thresholds. When lowering the threshold, more "
+        "churners are captured but at the cost of increasing the number of wrongly identifying "
+        "non-churning customers as high risk.")
+
+    ########### Threshold 0.4
+    name_map2={"XGBClassifier":"XGBoost","LogisticRegression":"Logistic Regression"}
+    table_rows=[]
+    cm_04={}
+    for file in glob.glob("../reports/*_th_04.json"):
+        with open(file, "r") as f:
+            data=json.load(f)
+        row={}
+        for key, val in data.items():
+            if key not in ["confusion_matrix"]:
+                metric_name=key.replace("_", " ").title()
+                row[metric_name]=val
+            elif key=="confusion_matrix":
+                cm_04[data["classifier_name"]]=val
+        table_rows.append(row)
+
+    df_metrics=pd.DataFrame(table_rows).sort_values(by="Average Precision", ascending=False)
+    df_metrics["Classifier Name"]=df_metrics["Classifier Name"].map(name_map2)
+    df_metrics.set_index("Classifier Name", inplace=True)
+    subset=[col for col in df_metrics.columns if col!="Threshold"]
+    st.dataframe(df_metrics.style.format(precision=3).highlight_max(subset=subset,axis=0, color="#8AC847"),width='stretch')
+
+    st.write("And as expected, raising the decision threshold reduces false positives, "
+        "though it captures fewer true positives.")
+
+    ########### Threshold 0.6    
+    name_map3={"XGBClassifier":"XGBoost","LogisticRegression":"Logistic Regression"}
+    table_rows=[]
+    cm_06={}
+    for file in glob.glob("../reports/*_th_06.json"):
+        with open(file, "r") as f:
+            data=json.load(f)
+        row={}
+        for key, val in data.items():
+            if key not in ["confusion_matrix"]:
+                metric_name=key.replace("_", " ").title()
+                row[metric_name]=val
+            elif key=="confusion_matrix":
+                cm_06[data["classifier_name"]]=val
+        table_rows.append(row)
+
+    df_metrics=pd.DataFrame(table_rows).sort_values(by="Average Precision", ascending=False)
+    df_metrics["Classifier Name"]=df_metrics["Classifier Name"].map(name_map3)
+    df_metrics.set_index("Classifier Name", inplace=True)
+    subset=[col for col in df_metrics.columns if col!="Threshold"]
+    st.dataframe(df_metrics.style.format(precision=3).highlight_max(subset=subset,axis=0, color="#8AC847"),width='stretch')
+
+    ########### Confusion matrices
+
+    st.write("The confusion matrices below illustrate the behaviour just discussed. "
+        "Depending on the company's retention goals, it can be preferred to "
+        "deploy a model with lower or higher decision threshold.")
+
+    st.write("For a decision threshold of 0.4, out of the 1407 test samples considered in this analysis, "
+        "both models miss less than 50 out of the 374 actual churners. But at the cost of "
+        "incorrectly flagging as high risk around 360 customers.")
+
+    ########### threshold 0.4
+    cols = st.columns(2)
+    with cols[0]:
+        st.markdown("- **XGBoost** (threshold: 0.4)")
+        df_cm_04_LR=pd.DataFrame(cm_04["XGBClassifier"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_04_LR, width='stretch')
+    with cols[1]:
+        st.markdown("- **LogisticRegression** (threshold: 0.4)")
+        df_cm_04_LR=pd.DataFrame(cm_04["LogisticRegression"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_04_LR, width='stretch')
+
+    st.write("A more conservative decision threshold of 0.6 paints the opposite picture. The "
+        "misidentified churners are just over half of what we obtained for the 0.4 threshold, "
+        "but at the cost of missing more than 100 actual churners.")
+
+    ########### threshold 0.6
+    cols = st.columns(2)
+    with cols[0]:
+        st.markdown("- **XGBoost** (threshold: 0.6)")
+        df_cm_06_LR=pd.DataFrame(cm_06["XGBClassifier"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_06_LR, width='stretch')
+    with cols[1]:
+        st.markdown("- **LogisticRegression** (threshold: 0.6)")
+        df_cm_06_LR=pd.DataFrame(cm_06["LogisticRegression"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_06_LR, width='stretch')
+
+    st.write("Setting the threshold to 0.5 is a nice middle ground between these two previous "
+        "scenarios.")
+
+    ########### threshold 0.5
+    cols = st.columns(2)
+    with cols[0]:
+        st.markdown("- **XGBoost** (threshold: 0.5)")
+        df_cm_05_LR=pd.DataFrame(cm_05["XGBClassifier"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_05_LR, width='stretch')
+    with cols[1]:
+        st.markdown("- **LogisticRegression** (threshold: 0.5)")
+        df_cm_05_LR=pd.DataFrame(cm_05["LogisticRegression"],index=["No Churn", "Churn"],columns=["Predicted No Churn", "Predicted Churn"])
+        st.dataframe(df_cm_05_LR, width='stretch')
+
+    # Logistic Regression showed little perfomance gain from Optuna tuning, while XGBoost improved significantly.
+
+    st.write("It is interesting to make a cross table between these two models to investigate "
+        "their agreement on the churn predictions. Before the hyperparameter optimization, "
+        "there was a **77.7%** agreement in their predictions. On the tuned versions, as "
+        "expected, the overlap grows, reaching an agreement of **93.8%**.")
+
+    st.write("To mitigate the customer churn while reducing the expenses with misidentified "
+        "churners (false positives), it is possible to apply **different retention strategies "
+        "to different threshold ranges**. More aggressive strategies can be targeted to "
+        "customers that have, for example, a churn probability higher than **80%**. On the other hand, "
+        "a lower cost approach can be targeted to those at **50% to 80%** churn probability.")
+
+    st.write("Additional strategies can include incentives to **migrate month-to-month " 
+        "contracts to one year contracts**, or yet offers of **6-month testing periods of "
+        "services** that are known to be associated with lower churn rates, as for example "
+        "tech support.")
+
+    st.write("Based on these evaluation metrics, **XGBoost** was chosen as the best performing "
+        "model and is deployed for future predictions. In the next tab, it is possible "
+        "to input the customers characteristics and estimate its churn probability.")
+
+    st.write("The Receiver Operating Characteristic ROC and Precision Recall curves as well as extra details regarding model "
+        "training and tuning can be found at the model comparisons notebooks in the "
+        "[project GitHub repository]"
+        "(https://github.com/CassiaNascimento/Customer_Churn_Prediction/tree/main/notebooks)")
+
+
+# Tentar migrar contratos de mês a mês para ano ano ou dois anos, 
+# Oferecer descontos ou dar gratuitamente alguns serviços como Tech Support, que sabemos
+# que estão associados com permanência do cliente, por um periodo de tempo, para melhorar a 
+# fidelidade do cliente.
+
 with tab4:
 
     st.write("Now it is your turn to make new predictions. Select the demographic "
@@ -317,8 +512,7 @@ with tab4:
     with st.form("my_form"):
         col1, col2 = st.columns(2)
 
-        model = col1.radio(label="Model:",options=["Logistic Regression"],horizontal=True)
-        metric = col2.radio(label="Metric:",options=["F1 Score"],horizontal=True)
+        model = col1.radio(label="Classification model:",options=["XGBoost"],horizontal=True)
 
         option1 = st.selectbox("Is female or male?",("Female","Male"))
         option2 = st.selectbox("Is a senior citizen?",("Yes","No"))

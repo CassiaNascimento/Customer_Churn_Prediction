@@ -9,11 +9,7 @@ logging.basicConfig(
 # Loading raw data
 dataset=load_raw_data()
 
-# Cleaning data
-dataset_cleaned=clean_data(dataset)
+# Cleaning data and saving if save=True
+dataset_cleaned=clean_data(dataset, save=False)
 
-if not os.path.exists("../data/processed"):
-    os.makedirs("../data/processed")
-
-# Saving the cleaned data 
-dataset_cleaned.to_csv('../data/processed/cleaned_data.csv')
+print(dataset_cleaned)

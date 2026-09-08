@@ -1,9 +1,13 @@
 # Customer Churn Prediction
-This ready to deploy machine learning project predicts the customer churn for a fictional telecommunications company. The raw data belongs to IBM Sample Data Sets and is available at [Kaggle](https://www.kaggle.com/datasets/blastchar/telco-customer-churn).
+This end-to-end machine learning project predicts the customer churn for a fictional telecommunications company. The raw data belongs to IBM Sample Data Sets and is available at [Kaggle](https://www.kaggle.com/datasets/blastchar/telco-customer-churn).
 
 Churn occurs when the customer cancels an ongoing contract. This ML project uses classification models to predict, based on a set of 19 features, which customers are likely to churn. This kind of prediction allows the fictional company to develop retaining strategies to avoid the churn. 
 
-The project is organized as a python module and is ready for deployment. Next steps include creating a docker image and deploying it on the cloud. A streamlit front-end is available.
+The project is structured as a modular Python package. Next steps include containerize the application using docker. 
+
+## Streamlit Web App
+
+This project includes an interactive web application built with Streamlit [].
 
 ## Quick Start (Run Locally)
 
@@ -56,4 +60,16 @@ The repository is organized as follows:
 
 - `data/` contains the `raw/` and `processed/` folders, which are initially empty. The raw dataset must be downloaded and placed in the `raw/` folder. After running the data cleaning step, either in the notebook or through the scripts with the `save=True` flag, the cleaned dataset will be saved in the `processed/` folder.
 
+- `reports/` contains .json files with the test set evaluation metrics, along with the ROC and AUC curves for each fitted model.
+
 ## Summary of findings
+
+- Top Overall Performer: XGBoost achieved the highest Average Precision (PR-AUC) on the imbalanced dataset, yielding an ROC-AUC of 0.85 and a Recall rate of 0.79.
+
+- Logistic Regression is a close second and secured top scores in 3 out of 6 evaluation metrics. After hyperparameter optimization using Optuna both models aggree on 93.8% of the test set predictions.
+ 
+- To captured the majority of churners while controlling campaign expenses, targeted retention strategies based on decision threshold ranges are recommended.
+
+- Additional strategies include offering incentives to migrate month-to-month contracts to one year contracts, and testing periods of complimentary services that are known to be associated with lower churn rates, as for example tech support.
+
+- XGBoost is integrated into the Streamlit front-end for future predictions.
