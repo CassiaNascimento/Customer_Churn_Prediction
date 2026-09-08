@@ -219,9 +219,7 @@ __marimo__/
 
 # Data
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
-!data/processed/.gitkeep
 
 # Old files
 old/
