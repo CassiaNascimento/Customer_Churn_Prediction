@@ -13,6 +13,8 @@ import re
 import json
 import glob
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
 st.title("Customer Churn Prediction with Machine Learning")
 st.write("Identifying customers at high risk of churning in advance enables companies to "
     "develop targeted retention strategies. This project applies supervised machine learning "
@@ -33,7 +35,7 @@ tab1, tab2, tab3, tab4 = st.tabs([":open_file_folder: The dataset",
     ":chart_with_upwards_trend: Exploratory analysis", 
     ":bookmark_tabs: Model performance report", ":keyboard: Make new predictions"])
 
-processed_data=pd.read_csv('../data/processed/cleaned_data.csv')
+processed_data=pd.read_csv(ROOT_DIR/'data/processed/cleaned_data.csv')
 processed_data['SeniorCitizen']=np.where(processed_data['SeniorCitizen']==0, "No", "Yes")
 
 df_churn=processed_data[processed_data["Churn"]=="Yes"]
